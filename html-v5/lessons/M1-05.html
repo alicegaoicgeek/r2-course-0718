@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>05 · 24h 交付一个工业级IP，跑通PPA优化</title>
+<style>:root{--bg:#1a1a1a;--card:#252525;--text:#e0e0e0;--accent:#ffb347;--muted:#999;--green:#7ecf8a;--blue:#6db3f2;--red:#f27d6d;--purple:#c5a3ff;--border:#3a3a3a}*{margin:0;padding:0;box-sizing:border-box}body{background:var(--bg);color:var(--text);font-family:"PingFang SC","Noto Sans SC",sans-serif;line-height:2.1;font-size:20px;max-width:780px;margin:0 auto;padding:32px 24px 80px;letter-spacing:.04em;word-spacing:.1em}h1{font-size:34px;line-height:1.45;margin-bottom:12px;color:#fff;font-weight:700}.subtitle{color:var(--muted);font-size:18px;margin-bottom:10px}.hook{color:var(--accent);font-size:22px;font-weight:600;margin-bottom:36px;padding:14px 18px;border-left:4px solid var(--accent);background:#2a2a2a;border-radius:0 8px 8px 0}hr{border:none;border-top:1px solid var(--border);margin:36px 0}h2{font-size:26px;color:#fff;margin:36px 0 14px;padding-bottom:6px;border-bottom:2px solid var(--border)}h3{font-size:22px;color:#fff;margin:24px 0 10px}h4{font-size:20px;color:var(--accent);margin:20px 0 8px}p{margin-bottom:14px}ul,ol{margin:10px 0 20px 24px}li{margin-bottom:8px}blockquote{background:#2a2a2a;border-left:4px solid var(--accent);padding:14px 18px;margin:16px 0;border-radius:0 8px 8px 0;color:var(--accent);font-weight:600}code{background:#333;color:var(--accent);padding:2px 8px;border-radius:4px;font-size:18px}pre{background:#111;padding:16px;border-radius:8px;overflow-x:auto;margin:16px 0;font-size:16px;line-height:1.6}pre code{background:none;color:var(--green);padding:0}table{width:100%;border-collapse:collapse;margin:16px 0;font-size:18px}th{background:#333;color:#fff;padding:10px 12px;text-align:left;font-weight:700}td{padding:10px 12px;border-bottom:1px solid var(--border)}.key-line{background:#2a2a2a;border-left:4px solid var(--accent);padding:14px 18px;margin:16px 0;font-size:21px;font-weight:600;color:#fff;border-radius:0 8px 8px 0}.tag{display:inline-block;background:#333;color:var(--muted);font-size:14px;padding:2px 8px;border-radius:4px;margin-right:6px}strong{color:#fff}em{color:var(--accent);font-style:normal}</style>
+</head>
+<body>
+<div class="tag" style="background:#534AB7;color:#fff;font-size:16px;padding:4px 14px">M1 跑通 · 05</div>
+<h1>24h 交付一个工业级IP，跑通PPA优化</h1>
+<hr>
+
+
+
+
+<h2>一、上接功能签出，下开 PPA 优化</h2>
+
+<strong>上一课把什么交了：</strong> 功能正确，门禁全绿，RTL 冻结。交付物 = 一个跑通等价检查的签出版本 + 当前综合报告中的三个数字：WNS（最差负裕量）、TNS（总负裕量）、Area（面积）。这三个数字是本课的尺子——后面的所有比较都跟它比。
+
+<strong>本课从现在开始：</strong> 在签出版本上建一条优化 loop，把时序和面积从基线推向更好。每一步可追问、可交接、可追溯。
+
+<p>上下游关系写死——签出在前，PPA loop 在后；功能门禁是前提。本课不重做功能，不移动基线。只做一件事：<strong>loop 怎么转。</strong></p>
+
+<p>这个例子是控制微序列器：约四千行 RTL、约一万六触发器，含预取、译码、标志更新及跨域控制耦合；功能点与骨架、P0 门禁已在上一课签出，本课输入为稳定版本，以及写入 GOAL 并锁定的 WNS/TNS/Area 基线。它不是外设型 IP，而是控制耦合型设计，深水区在关键路径锥、控制扇出、晚选择与长组合结构——PPA 主 loop 只在这些点上诊断根因、按三三制加载策略出候选，经综合与对拍过滤后，相对固定基线算 score 并决定提升或换挡；不重做功能定义，不移动基线，门禁失败结果不进评分。缺稳定版本或基线三数，禁止启动 loop；没有原点，快慢对比无效。</p>
+
+<p>本课用到两个反复出现的概念，先定义清楚：</p>
+
+<ul><li><strong>基线三数</strong> = 进入本课时从签出版本综合报告中取出的 WNS、TNS、Area。锁死在 GOAL 文件中，全程不改。</li></ul>
+<ul><li><strong>INDEX</strong> = 一个与 RTL 同目录的文件（<code>PPA_LOOP_INDEX.yaml</code>），每圈追加一条记录：根因、三路策略名、门禁结果、score、决策。全文「写回 INDEX」指写这个文件。</li></ul>
+
+<p>启动 loop 前的检查清单——每一项都可验证：稳定版本路径存在；上一课签出证据可定位；GOAL 中基线三数与综合报告一致；INDEX 可追加写入；策略库可按名称调用并留痕；门禁脚本可重复执行。任一项只靠口头确认，不算通过。</p>
+
+<strong>score 比较只在门禁通过集合内进行。</strong> 三个候选若只有一个通过，就在这一个与当前最优之间比；若全部失败，本圈无 score 决策，只产出失败模式与诊断复审标记。禁止在失败集合里挑“看起来 WNS 更好”的版本晋升——那是最常见的退出 loop 方式。
+
+<h2>二、PPA 先建成 loop</h2>
+
+<strong>为什么不建 loop 不行？</strong> 只用 AI 改 RTL + 手工对比时序数字，三种失败必然出现：
+
+<ul><li><strong>改了三版忘了第一版为什么不行。</strong> 聊天窗口里 A 方案好还是 C 方案好——没有 INDEX 记录根因和 score，三版后全凭记忆，记忆不可交叉对比。</li></ul>
+<ul><li><strong>在移动靶上自我幻觉。</strong> 每次用「上一版最好结果」做基准——实际上每次比较的尺子不同。第一版 WNS −0.50，第三版 −0.30，看似改善了 40%，但中间换了综合选项。不是 RTL 变好了，是尺子换了。</li></ul>
+<ul><li><strong>功能被改坏仍比时序。</strong> 没强制跑等价检查就比 WNS——带着功能 bug 的版本因为砍掉了关键逻辑、时序数字更好看，被晋升为最优。两周后发现功能退化，回到签出点重做。</li></ul>
+
+
+<h2>三、loop 的起点：读诊断 → 出三路候选</h2>
+
+<p>*位置：第二节搭好了 loop 骨架。本节是 loop 的第一步动作——从 timing 报告诊断根因，开出三路不同策略的候选。*</p>
+
+<p>loop 的第一推动是诊断。从 timing 报告取出十条到二十五条关键路径，把慢写成可匹配策略的根因：组合逻辑深度过大、控制信号高扇出、标志更新锥过深、选择信号过晚参与运算、长表达式可拆分、FSM 输出拖长下游。路径数量 10–25：太少易盲，太多易散。根因写清，三路并行才有分工；根因只写“不够快”，三路容易变成同一改法的三种参数。诊断结果与根因—策略对应写入 INDEX；连续两圈根因不变且 score 无提升，先复审诊断。</p>
+
+<p>三三制在 loop 里这样用：同一根因并行三个不同策略家族（扇出、切割、重构），统一综合与门禁，按 score 排序综合，形成下一圈问题再开三路。门禁与 score 能自动则自动；灰区才人工，口径事先写进 GOAL。同家族参数变体不计入三路。</p>
+
+<p>目标只有一个：相对锁定基线的 score 改进。两组护栏：门禁失败不得评分；基线不得移动，失败必须入库。生成可以快，错误不能漏。</p>
+
+<p>对着当前根因把本圈做透，提升或确认失败后立刻复盘，把有效手法写入 INDEX/Skill；拖到事后，沉淀质量会明显下降。顺序固定：诊断 → 三路取样 → 门禁与计分 → 复盘沉淀 → 新问题再 loop。策略家族与根因的对应要事先可查，避免临场拍脑袋。扇出类根因优先寄存器复制或局部缓冲；组合过深优先切割与分段寄存；晚选择优先把选择前移或晚绑定；长表达式优先拆中间量与公共子表达式。对应关系不是教条，但必须写进当圈 INDEX，换挡时才知道试过哪一科。</p>
+
+<h2>四、loop 的中点：门禁过滤后，对着固定基线算 score</h2>
+
+<p>*位置：上一节开出了三路候选。本节在三路跑完综合和门禁之后——决定谁算改进、谁被打死。*</p>
+
+<p>过滤之后才有比较，比较必须锚定进入本课时锁定的 baseline，而不是锚定“上一圈我最喜欢的结果”，否则分数会在移动靶上自我庆祝，团队也会在自我庆祝里失去对真实进展的感觉。score 同时约束最坏路径（WNS）、整体违例（TNS）与面积：三者加权合成一个分，面积相对基线恶化超过阈值时加惩罚，防止用堆面积换时序数字。计算时符号方向必须事先写死——改善对应更低 score——避免在 WNS 为负的习惯下把方向算反</p>
+
+<p>于是“改进”获得了唯一合法的含义：先过门禁，再在固定原点上得到更好的 score，然后才配提升为新的 major 版本。看起来更快却过不了等价，不是改进；只对内轮自嗨、却说不清相对签出点如何，也不是改进。</p>
+
+<p>三三制给出的多个候选，在 PPA loop 里并不直接“谁看起来快谁上”，而是先过等价/对拍，再在同一把尺子上比。尺子在进 loop 时钉死：基线 WNS、TNS、Area 来自第一版签出综合，之后禁止改写。</p>
+
+<p>比较量定义为越小越好的 score。时序两项用“基线减当前、再除以基线绝对值”做成无量纲改进；面积用“相对基线的增量比例”。三项系数依次为 0.5、0.35、0.15。面积相对基线恶化超过 10% 时，额外加 0.5 的惩罚项，否则惩罚为 0；基线绝对值过小则该分项按 0 处理，避免除零。</p>
+
+<p>用一组示意数对齐计算方向：基线 WNS −0.50、候选 −0.20，时序归一为 −0.60；若 TNS 归一 −0.40、面积归一 0.05，加权后约 −0.43。面积一旦跨过 10% 阈值，惩罚会抵消部分时序收益，避免用面积换数字。</p>
+
+<p>loop与手艺的差别在于能否重放：谁被提升、谁被丢弃、谁因面积惩罚被压下，都应能在 INDEX 里回放。尺固定，争论才能回到数上；尺随情绪移动，经验只能变成传说，不能变成原则。</p>
+
+<h2>五、loop 的决策点：score 出来后，继续、换挡还是停车</h2>
+
+<p>*位置：上一节给三路候选打了分。本节做管理决策——基于 score 和计数决定下一圈走什么方向。*</p>
+
+<p>loop一旦转动，管理问题往往比生成问题更致命：生成可重来，管理失灵会污染记忆链。未达版本上限、未达目标、未触发切换，就继续；候选过门禁但未超过当前最优，无改善计数加一；门禁失败只记失败模式，不计入“方向试尽”；成功提升则计数归零并前移最优指针；计数触达阈值，换策略家族或回退切分边界，禁止同一家族靠加试次冒充进展；系统性回归，先回上一稳定 major。停车条件包含版本上限、整圈无提升、GOAL 达成；停表后必须人签核。日常转 loop 可以自动，停表不能无人负责。</p>
+
+<p>看板盯四个数：当前最优 score、无改善计数、本圈门禁失败率、已尝试策略家族是否变多样。失败率陡增，先查诊断与改写幅度，不先放宽门禁；家族集合不增长而轮次空涨，说明三三制名存实亡；计数到顶仍不换挡，说明管理失灵。没有切换条件的搜索会在局部最优自我说服；没有失败分类会把“功能改坏”与“方向试尽”混为一谈。</p>
+
+<p>异常按 loop 处理：三候选全失败，回到诊断并缩小改写幅度，不降门禁；频繁触面积惩罚，检查是否用面积换时序并换家族；INDEX 与 RTL 不一致，以可复现门禁结果为准，先停止 loop 修记录。宁可停止 loop，不污记忆。版本上限默认到 v10，或 GOAL 另写。一个 major 轮次无提升即可停；工程上可并行使用连续多圈无改善强制换挡，两者都要在 GOAL 声明，避免执行到一半争论停不停。提升 major 时无改善计数归零；回退到稳定版时，从该版的计数与最优指针恢复，不凭记忆口头回退。</p>
+
+<h2>六、loop 的产出：每圈写回 INDEX，多圈攒成资产</h2>
+
+<p>*位置：loop 转了几圈之后。本节回答：转完一圈，INDEX 多了什么；多圈之后，INDEX 变成了什么。*</p>
+
+<p>一圈结束，INDEX 至少增加：根因、三策略名、门禁结果与失败原因、score、决策、无改善计数。多圈之后，还应有相对 baseline 的 score 轨迹，以及“某策略家族在某类根因上无效”的负样本地图。控制微序列器路径密集，人脑记不住禁忌；策略名会引诱重复同一种错误。失败不入库，资产为零。</p>
+
+<p>考核若只奖数字、不奖失败入库，loop 会幻觉：挪原点、藏失败。数字是收成，记录是土壤。禁忌可检索、最优可回滚、争论能指回证据，才是复利。PPA 里稀缺的往往不是更强生成，而是失败可检索；失败显形，学费才降下来。</p>
+
+<p>有效手法在提升或确认失败后立刻写入 INDEX/Skill，不要拖到事后。Skill 沉淀的是“某根因 → 某家族 → 门禁与 score 结果”，不是空口号。</p>
+
+<h2>七、loop 的启动与迁移：第一圈怎么跑通，换项目时怎么搬走</h2>
+
+<p>*位置：到此四节的流程讲完了。本节是实操——从零启动第一圈的具体步骤 + 换到非控制型 IP 时的迁移原则。*</p>
+
+<p>第一圈只追求闭合。核对稳定版本与基线三数，写入 GOAL（含公式符号与版本上限）；建立 INDEX v0，当前最优=签出版本，无改善计数=0；跑 timing，写合格根因；按根因开三路候选；同一门禁脚本跑完；对 PASS 算 score；决定提升或计数；整行写入 INDEX。结束时团队必须能指着记录说：试了什么、打死了什么、相对原点如何、下一圈禁止什么。指不出来，loop 未接通。第一圈常见失败不是综合报错，而是根因写太粗、三路实为一路、门禁脚本中途更换、基线被改成上一候选。这四类在启动 loop 检查里就要挡掉：根因必须落到可匹配家族；三路家族名不同；门禁命令与报告路径写死在 GOAL；基线三数只写一次。第一圈通了，才有资格谈百分比；第一圈不通，百分比只是噪音。</p>
+
+<p>从微序列器这类控制核的经验看，PPA loop 前几圈的价值多半不在大涨百分比，而在快速排除无效家族：哪些扇出手法破门禁，哪些切割引入新的关键路径，哪些重构面积越线。排除本身就是进展，前提是排除被写进 INDEX。若前几圈只留下“又试了一次”而没有失败分类，后面圈数再多也只是重复劳动。</p>
+
+<p>因此第一圈到第三圈的管理重点是：诊断是否越写越具体，三路是否真不同，失败是否可分类，基线是否仍固定。百分比是后几圈的话题；前几圈把 loop 的卫生做干净，后面的百分比才有讨论资格。</p>
+
+<p>第二圈起每次先读 INDEX，加载负样本与最优指针，再诊断与三路取样。评估始终对同一基线，不把基线挪到“上一圈最优”。圈数增加后，看 score 轨迹与无改善计数，比开会争论“再试试”干净。</p>
+
+<p>换控制型 IP 时迁移管法：固定原点，先工具后分数，三路取样，失败入库，计数换挡，人签停表。不迁移某次 WNS 故事。功能签出是上车；能走多远取决于优化是否在约束里转、是否把记忆留下。</p>
+
+<p>完成判据五条同时满足才算跑通：合法停表条件触发；最终版本门禁通过；INDEX 自 v0 连续可审；有相对固定基线的对比说明；人已最终签核。缺一不可。让模型提出可能，让工具拒绝幻觉，让 INDEX 积累禁忌与最优，让人在该负责处签字。loop 转起来，PPA 才开始；loop 管起来，PPA 才结束得了。</p>
+
+<p>GOAL 在启动 loop 前至少写清六项：等价优先于 PPA；锁定的 WNS/TNS/Area 基线三数；score 公式与符号约定；版本上限；门禁命令与报告路径；停表与换挡条件。缺基线或缺公式，禁止进入 major v1。</p>
+
+<p>对人签核的要求也具体化：最终放行前抽查至少一条 FAIL 记录是否有原因、一次提升是否可按 INDEX 复算 score、基线三数是否与 GOAL 一致。抽查不过，不签字。签字文本需确认门禁通过、INDEX 连续、对比相对固定基线、灰区已处理。</p>
+
+<p>本课不承诺固定小时内的固定改善百分比。承诺的是：在功能已签出的前提下，你有一条能转、能记、能换挡、能停表的 PPA loop，并且第一圈起就可以按记录工作，而不是按聊天记录猜。</p>
+
+<p>最后把可执行顺序再压一句：启动 loop 前锁版本与基线；每一轮 loop 诊断根因、三路取样、门禁过滤、基线计分、INDEX 记账；无改善则换挡；达标或到上限则停表人签。说清这些，PPA 优化才跑成工作流。</p>
+</body>
+</html>

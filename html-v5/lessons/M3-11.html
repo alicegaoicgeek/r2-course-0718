@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>11 · Debug 占 40% 时间，智能体时代会变怎样？</title>
+<style>:root{--bg:#1a1a1a;--card:#252525;--text:#e0e0e0;--accent:#ffb347;--muted:#999;--green:#7ecf8a;--blue:#6db3f2;--red:#f27d6d;--purple:#c5a3ff;--border:#3a3a3a}*{margin:0;padding:0;box-sizing:border-box}body{background:var(--bg);color:var(--text);font-family:"PingFang SC","Noto Sans SC",sans-serif;line-height:2.1;font-size:20px;max-width:780px;margin:0 auto;padding:32px 24px 80px;letter-spacing:.04em;word-spacing:.1em}h1{font-size:34px;line-height:1.45;margin-bottom:12px;color:#fff;font-weight:700}.subtitle{color:var(--muted);font-size:18px;margin-bottom:10px}.hook{color:var(--accent);font-size:22px;font-weight:600;margin-bottom:36px;padding:14px 18px;border-left:4px solid var(--accent);background:#2a2a2a;border-radius:0 8px 8px 0}hr{border:none;border-top:1px solid var(--border);margin:36px 0}h2{font-size:26px;color:#fff;margin:36px 0 14px;padding-bottom:6px;border-bottom:2px solid var(--border)}h3{font-size:22px;color:#fff;margin:24px 0 10px}h4{font-size:20px;color:var(--accent);margin:20px 0 8px}p{margin-bottom:14px}ul,ol{margin:10px 0 20px 24px}li{margin-bottom:8px}blockquote{background:#2a2a2a;border-left:4px solid var(--accent);padding:14px 18px;margin:16px 0;border-radius:0 8px 8px 0;color:var(--accent);font-weight:600}code{background:#333;color:var(--accent);padding:2px 8px;border-radius:4px;font-size:18px}pre{background:#111;padding:16px;border-radius:8px;overflow-x:auto;margin:16px 0;font-size:16px;line-height:1.6}pre code{background:none;color:var(--green);padding:0}table{width:100%;border-collapse:collapse;margin:16px 0;font-size:18px}th{background:#333;color:#fff;padding:10px 12px;text-align:left;font-weight:700}td{padding:10px 12px;border-bottom:1px solid var(--border)}.key-line{background:#2a2a2a;border-left:4px solid var(--accent);padding:14px 18px;margin:16px 0;font-size:21px;font-weight:600;color:#fff;border-radius:0 8px 8px 0}.tag{display:inline-block;background:#333;color:var(--muted);font-size:14px;padding:2px 8px;border-radius:4px;margin-right:6px}strong{color:#fff}em{color:var(--accent);font-style:normal}</style>
+</head>
+<body>
+<div class="tag" style="background:#0F6E56;color:#fff;font-size:16px;padding:4px 14px">M3 进阶 · 11</div>
+<h1>Debug 占 40% 时间，智能体时代会变怎样？</h1>
+<hr>
+
+<p>如果你上了 AI Coding Agent，发现 debug 时间一点没少——你不是一个人。你只是做的事变了：以前手动 grep log、逐帧追波形，现在手动判断 AI 给你的结果对不对。</p>
+
+<p>这不是 Agent 不行。是 40% 这个数字从来不是一种工作。它包含两种性质完全不同的事：一种可以被工具吃掉，另一种——<strong>不仅不会消失，反而会因为 AI 的参与而增加</strong>。</p>
+
+<hr>
+
+<h2>两种 debug，两个方向</h2>
+
+<p>验证团队把 40% 的项目时间花在 debug 上。这个数据在芯片验证圈子里流传了八年，大部分人用它来论证"该上更好的工具"。但问题是：上了更好的 Verdi、更快的仿真器、更智能的formal之后，40% 降了吗？</p>
+
+<p>没有。因为工具让你定位 bug 更快的同时，也让产生 bug 的速度更快了——设计规模增长、模块间交互更复杂、验证环境本身的 bug 也在增加。</p>
+
+<p>真正改变这个比例的，不是更好的 debug 工具，而是一个更根本的区分：<strong>debug 不是一种工作。</strong></p>
+
+<p>把"debug"当一个整体讨论优化，是第一个错误。真正该问的是：当前这 40% 里，哪些工作能写成 SOP，哪些不能？</p>
+
+<p>能写成明确步骤的——打开 Verdi、点波形、grep UVM log、追信号驱动链、按 commit 定位源码行——每一步都有固定操作。能写成 SOP，就能被自动化。这就是<strong>机械 debug</strong>。r2-debug 的八阶段流水线里，检测、定位、签核这三个阶段已经做到了分钟级甚至秒级：3000 个失败日志从 4–6 小时压到分钟级，源码定位从 30–60 分钟降到秒级。</p>
+
+<p>不能写成步骤的——3000 个失败聚类成 5–10 个桶之后，先修哪个？判断"这不是 bug，是 spec 写错了"？确定这个改动会不会影响三个月前为兼容某个客户写的那条状态机逻辑？这些不是步骤问题，是判断问题。判断的前提是你对整个系统的结构、历史和边界有深度理解。这就是<strong>认知 debug</strong>。</p>
+
+<blockquote>验证团队 40% 时间花在 debug。流片前最后一个月，debug 占用 60%+ 人力。</blockquote>
+<blockquote>— Wilson Research 2018, materials/01</blockquote>
+
+<p>所以智能体时代 debug 时间会变怎样？<strong>机械的部分被工具吃掉，但认知的部分反而因为系统更复杂、AI 改动更多而增加。</strong> 40% 不会自动降到 12%，它只是从"手动 grep"变成了"判断 AI 给你的结果对不对"。</p>
+
+<p>如果你不理解这个区分就去上 Agent，你会发现自己攒了一堆自动化工具，debug 时间一点没少——因为你做的不是原来那件事了。</p>
+
+<strong>怎么验证这个区分？</strong> 找一个最近的项目，把 debug 活动全列出来。每一项问一个简单的问题：能不能写成明确的操作步骤？能→机械，不能→认知。算两个占比。如果两个占比加起来不等于项目总 debug 时间，说明你的分类有问题——有些活动既不是纯机械也不是纯认知，卡在中间。这个时候不要强行二分，标记为"混合"，下次再拆。
+
+<strong>但要小心——</strong> 不要用"看起来难"来判断。追一个跨模块的信号驱动链听起来很复杂，但步骤是确定的：从目标信号反查 driver → 追踪至源码 → 逐层向上——这是机械的。判断一条一年前的兼容逻辑该不该保留听起来简单，但没有步骤——这是认知的。判断标准只有一个：<strong>能不能写成 SOP。</strong> 另外，二分之后不要认为"认知 debug 才高级"。机械 debug 是认知 debug 的前提——信号追不对，建立在上面的判断全是错的。
+
+<hr>
+
+<h2>两个方向，同一个目标</h2>
+
+<p>到这里你可能会问：既然机械 debug 可以被自动化，那把自动化做好不就够了？</p>
+
+<p>不够。因为方向可能从一开始就偏了。</p>
+
+<p>EDA 厂商希望你继续 debug。不是因为他们坏——是因为整个工具体系的商业模式建立在"你写的 bug 我能帮你找到"之上。Verdi、VCS、UVM，它们解决的都是"出了 bug 之后怎么办"。但没有人卖"怎么不写 bug"的产品，因为那没法做成工具——那是方法论、流程和工程纪律的事。</p>
+
+<p>验证四象限框架把这个问题讲透了。验证工作可以按两个维度分成四个区域：面向业务还是面向技术，可自动化还是需要人工判断。</p>
+
+<p>左下半区——面向技术且可自动化的——是自动化的主战场。Formal verification、单元测试、覆盖率驱动的随机验证都在这里。它们是基本功，是基线。左上半区——面向业务且可自动化的——ESL 自动分析、transaction 级随机验证，验收标准明确，同样值得自动化覆盖。</p>
+
+<p>但真正的认知资源应该投在右上和右下——那些"不确定"的区域。右上角：验收标准模糊、需要人去"看看这个结果对不对"的场景，比如探索性测试、可用性判断。右下角：需要技术纵深和人工判断的场景——对复杂 bug 的根因分析、架构层面的风险评估。</p>
+
+<blockquote>主要精力应花在持续避免产生 bug，而不是高效 debug。避免产生 bug 和高效 debug，这是两种价值导向，都需要花费时间精力，前者才是更值得投资的事情。</blockquote>
+<blockquote>— 验证四象限对话, materials/02</blockquote>
+
+<p>这个框架的洞察不在四个象限本身，而在<strong>精力分配</strong>。不是"先把自动化做好再管别的"。是用自动化解脱你的人力，然后把人力投到自动化覆盖不了的地方。</p>
+
+<p>关键的一步是：很多 bug 不是设计复杂度造成的，是工程能力不扎实。需求明确，技术方案清晰，但因为流程松散、验证环境不稳定、接口契约不明确，反复产生同类 bug。这种 bug 用更好的 debug 工具去修是错的——该修的是工程流程本身。r2-debug 的第八阶段给出了实现路径：已签核案例自动入库 → 知识图谱构建 → 新代码提交自动匹配预警。效果：历史 bug 重复发生率从 15–20% 降到 5% 以下。这不是"学教训"，是<strong>让系统自动记住教训并在下一次自动拦截</strong>。</p>
+
+<strong>怎么验证方向对不对？</strong> 拉最近三个月的所有 bug，做一次来源分类。每个 bug 落在四象限的哪个区域？产生原因是什么？算出每个象限的占比。如果你发现"技术 × 可自动化"象限的 bug 占比居高不下——你缺的不是更好的 debug 工具，是更强的预防机制。如果大部分 bug 集中在"技术 × 不可自动化"——那你要做的不是买新的测试平台，而是提升团队的架构理解和系统判断能力。
+
+<hr>
+
+<p>但当 bug 真的发生时——预防没拦住的那一部分——你需要的不只是一套 checklist。你需要一个<strong>战略框架</strong>。</p>
+
+<p>1935 年，3 万红军被 40 万国军包围。北面长江被川军封死，东面南面湘军中央军压过来，西面滇军占金沙江。天罗地网。四个半月后，红军跳出去了。不是靠硬打——每一步都不是事先计划的。下一步的方向，是上一步的结果告诉你的。</p>
+
+<p>这就是 debug 该有的样子。</p>
+
+<p>r2-debug 六步法（并案 / 比差 / 以动制静 / 回滚 / 人类直觉 / 经验回流）就是把四渡赤水的战略智慧映射到调试工程。它不是让你记住六个步骤——是让你理解 debug 的本质：<strong>在信息极度不对称的情况下，通过一系列结构化的行动，逐步把信息不对称扳回来。</strong></p>
+
+<strong>并案</strong>：3000 个回归失败不是 3000 个独立问题。同一个 bug 的失败在信号驱动链上必然交汇——这是因果链交集聚类的物理基础。r2-debug 把 3000 个失败自动聚成 5–10 个桶，每个桶一个代表性案例，修复一个 → 解决桶内 80% 的失败。
+
+<p>但聚类只是工具做的事。真正需要人判断的是：<strong>选哪个桶先修？</strong> 不是按 bug 数量最多排序。是按"根因模块与其他模块共享信号最少"排序。四渡赤水选王家烈黔军，三层原因：黔军弱（表面）、王蒋有矛盾薛岳不会救（深层）、打穿黔军能打开向西通道（战略）。共享越少，修了越不引发连锁问题，越适合当第一刀。</p>
+
+<strong>比差</strong>：两个版本之间，设计变了什么？不看全量代码，只看变了的那几个模块和信号。操作纪律：一个实验超过 15 分钟还没结果，换一个更小的。你的大脑在 10 分钟后就会锚定初始猜测，后面 110 分钟都在找证据支持它而不是推翻它——你已经进了"认知包围圈"。
+
+<strong>以动制静</strong>：bug 看不懂的时候，不要硬看。先动。改个参数、关个模块、加个 delay。动了之后 bug 行为变了，你就有两个画面。两个画面的差异就是线索。这不是排除法，是<strong>制造新信息，从新信息里看到原来列表里根本没有的答案</strong>。三渡赤水佯攻鲁班场就是这个逻辑——目的不是占领鲁班场，是让蒋介石做一个确定性的反应，从而暴露他西面的防线是虚的。
+
+<strong>但要小心</strong>："加个 delay 看看"如果不覆盖关键路径、不能区分假设、不能缩小可能性——这是瞎试，不是以动制静。实验必须有三个条件：覆盖面够宽、假设有区分力、做完后假设空间显著缩小。
+
+<strong>回滚</strong>：不逐帧分析为什么失败，直接问——哪个 commit 引入后 bug 的条件被满足了？定位到 commit → 看 diff → 条件暴露 → 修那个条件。r2-debug 的分析时间：34 秒。传统二分搜索：1968 秒——<strong>57 倍差距</strong>。核心逻辑：每个 bug 存在需要一组条件同时满足。你不需要理解根因，只需要找到其中一个条件，改变它。四渡赤水直扑贵阳不是要攻城，是让守住金沙江的滇军离开金沙江。攻击条件，不攻击本体。
+
+<strong>人类直觉</strong>：毛泽东面对 40 万敌军，不看每个点的兵力数字。他画一条线——川军、滇军、黔军、中央军各自"保地盘"的利益边界在哪里。边界一画出来，40 万降维成 4 股力量。调试中的降维：几万行 regression log → 3–5 个 failure signature。关键在降维的维度——按 test name 降维，你一开始就看错了。按 log 行为模式降维，看到的是 bug 自己的结构。工具做聚类，人做判断。
+
+<strong>经验回流</strong>：一渡发现北面川军太硬 → 二渡打回东面 → 三渡发现佯动有效 → 四渡直冲金沙江。不是事先有路线图，是每一步都产生新信息，新信息决定下一步方向。回滚 34s vs 1968s 的差距就在这里：二分搜索不用反馈来加速，机械对半分。ML 模型用历史 regression 结果的反馈给 commit 打分——越像"曾经引入过 failure"的 commit，越优先验证。
+
+<blockquote>并案 / 比差 / 以动制静 / 回滚 / 人类直觉 / 经验回流 — 对应的是四渡赤水「找到缝隙 → 观察变化 → 制造信息 → 直捣中枢」四段式。</blockquote>
+<blockquote>— 四渡赤水 r2-debug, materials/03</blockquote>
+
+<p>如果你刚才留意到了：六步法中，并案和比差偏机械（工具可做），以动制静和人类直觉偏认知（人做判断），回滚和经验回流在两者交界。还记得我们一开始区分的那两种 debug 吗？六步法不是六个独立的招式——它是机械和认知在两军交火时交替使用的战术体系。</p>
+
+<hr>
+
+<h2>画边界这件事，不能外包给 AI</h2>
+
+<p>前面说了三件事——debug 的构成（机械 vs 认知）、资源的方向（预防 > 高效 debug）、信息博弈的方法（六步法）。分开看都是对的路。但把它们放在一起，会碰到一个更尖锐的问题。</p>
+
+<strong>AI 越强，这些路越容易走岔。</strong>
+
+<p>一位工程师落地过一个 AI 编程项目。最开始被 Claude Code 的效率震撼：十分钟一个接口，半天一个需求，各类 Bug 几分钟修复。于是他不断加码——堆提示词、加 Agent、架构师 Agent、开发 Agent、修 Bug Agent、代码评审 Agent、重构 Agent 全上了。体系越来越完善，产出节节攀升，然后项目开始失控。</p>
+
+<p>修好的 Bug 隔天复现。反复强调不可改动的状态被 AI 修改。明确要求保留的老旧链路被直接清理。最严重的一次：让 AI 修一个前端展示问题，它改动了十几个文件——数据传输对象、状态机逻辑、兼容代码、接口返回结构全动了。前端问题是修好了，整个项目差点全线崩溃。</p>
+
+<p>这不是 AI 的错。是你没告诉它<strong>什么不能碰</strong>。</p>
+
+<blockquote>边界模糊的前提下，AI 能力越强，项目风险就越高。</blockquote>
+<blockquote>— Harness Engineering, materials/04</blockquote>
+
+<p>在 AI 的视角里，废弃代码就是无用垃圾（但在工程里是兼容逻辑），状态字段只是普通字符串（但在业务里是前后端和数据库的共同契约），返回值只是一个普通类（但在分布式系统里是服务间的接口边界）。AI 不理解这些——它只看到代码。</p>
+
+<p>所以治理 AI 的第一原则不是"写好 prompt"。是在写 prompt 之前，先把边界画清楚。</p>
+
+<p>驾驭工程（Harness Engineering）给出了四步：</p>
+
+<strong>第一步：画边界。</strong> 区分当前业务链路与历史遗留链路，界定什么能改、什么不能碰、什么需要额外审批。这一步不做，后面全错——AI 越强，越有能力踩到你没画的边界线里去。
+
+<strong>第二步：建工作流。</strong> 不是堆 Agent。团队靠流程运转，不靠岗位数量。按风险等级分任务：Tier 0（文档/样式/注释）→ 自由行动；Tier 1（普通 Bug / 小功能迭代）→ 标准流程；Tier 2（接口 / DTO / 数据契约）→ 全链路影响评估；Tier 3（认证逻辑 / 状态机 / 历史兼容 / 核心业务链路）→ 集体评估 + 回滚方案 + 分阶段灰度。关键区分不在代码量——一个改了三行代码的状态机改动是 Tier 3，一个改了五百行注释的文档整理是 Tier 0。分级标准是<strong>影响面和不可逆程度</strong>。
+
+<strong>第三步：建知识库。</strong> AI 在多次对话之间会遗忘——遗忘历史踩过的坑、兼容规则、架构红线。把你的架构文档、故障台账、开发现状、进度记录沉淀为 AI 可读的上下文。AI 才会从"临时外包"变成"熟悉项目全貌的资深老员工"。
+
+<strong>第四步：建复盘。</strong> 工具会老化，边界会变动，工作流会偏离。每日/每周/每月复盘，把 AI 出错模式、协作卡点、新发现的禁区持续输入系统。每次越权事故都是一次边界更新——你发现了一条之前没画的线。
+
+<p>AWS 从另一个角度强化了同一件事：限制 Agent 的操作范围必须通过<strong>架构层面</strong>实现（如 IAM role），而不是依赖模型的行为约束（如 system prompt）。有 tool access 的 Agent 是一个真正的执行主体，不是文本生成组件。你告诉它"别删数据库"没用——你得让它<strong>字面不能调 delete API</strong>。</p>
+
+<p>回到这条主线上来——还记得我们前面说的预防 > 高效 debug 吗？驾驭工程的四步法中，画边界和建工作流，就是"预防"在 AI 时代的工程化实现。你先画好边界，AI 就不会产生那些需要 debug 的 bug。这比用六步法去修 AI 产生的 bug 高效得多。</p>
+
+<hr>
+
+<h2>不是所有问题都值得一个 Agent</h2>
+
+<p>走到这里，你手里有了认知框架（机械 vs 认知）、资源方向（预防 > 高效 debug）、战术方法（六步法）、治理基础设施（驾驭工程）。现在回到最后一个问题——也是最直接的一个：下周团队讨论"要不要建个 Agent 做 X"，你怎么判断？</p>
+
+<p>大多数人问的是"这个任务能不能做成 Agent"。真正该问的是三个更早的问题。</p>
+
+<strong>第一：这个任务复杂到需要 Agent 吗？</strong>
+
+<p>Workflow 和 Agent 的区别不在"有没有 LLM 参与"，而在<strong>谁决定下一步</strong>。Workflow 的路线是人提前设计好的，LLM 在其中的角色是组件——做分类、做提取、做生成——但每一步之后该去哪，是代码决定的。Agent 的路线是模型在运行时自己决定的：观察环境 → 决策下一步 → 执行 → 观察结果 → 再决策。</p>
+
+<p>判断标准很简单：你能画出完整的决策树吗？能→Workflow。不能（有太多"看情况"的节点）→Agent 候选。Baidu 的实践数据：一个电商推荐系统用优化过的提示词模板就能达到 85% 以上的准确率，引入 Agent 架构反而因为多轮交互增加 30% 以上的响应延迟。不是 Agent 不好，是<strong>问题不需要 Agent</strong>。</p>
+
+<strong>第二：这个任务值得 Agent 的额外成本吗？</strong>
+
+<p>Agent 的探索过程会消耗大量 token。如果每次任务预算只有 10 美分（如高频客服），最好用 Workflow 覆盖最常见问题，只在少数复杂场景升级到 Agent。Anthropic 的判断：Agent 应该用来处理复杂、有价值、值得探索的任务。它不应该成为每个场景的默认升级包。</p>
+
+<strong>第三：Agent 的核心能力卡在哪一步？</strong>
+
+<p>如果卡在"语义理解"（用户说的 ROI 对应哪个字段），这是 LLM 能做的——建好语义层就行。如果卡在"这个改动的业务影响"（改了支付模块的某个字段会不会影响三个国家六个支付渠道），这需要系统性的业务知识——不是单靠 LLM 能解决的。<strong>如果中间有明显瓶颈，缩小范围再试。</strong></p>
+
+<blockquote>Workflow 是大模型和工具按照预先设计好的流程运行；Agent 则是大模型可以根据环境反馈，自己决定下一步怎么走。</blockquote>
+<blockquote>— Anthropic Barry Zhang, materials/05c</blockquote>
+
+<p>还有一个容易被忽略但致命的维度：<strong>错误成本和错误发现难度。</strong> 写代码适合做 Agent 的一个关键原因是错误容易发现——单元测试和 CI 会告诉你。但如果一个 Agent 做的是"自动 review 并 merge PR"，错误成本高且错误难以发现（代码 review 的很多问题是逻辑问题不是编译错误），就很难放心让 Agent 自主行动。</p>
+
+<p>还记得最开始区分的机械 debug 和认知 debug 吗？现在可以给一个直接的回答了：<strong>机械 debug（检测、定位、签核）用 Workflow</strong>——步骤确定，不需要动态决策。<strong>认知 debug（根因分析、分诊选点、回滚策略）可以用 Agent</strong>——但前提是 Agent 的输出只是建议，人在关键节点做审批。不是"Agent 自动 debug"，是"Agent 提出假设，人做决策"。</p>
+
+<strong>但要小心</strong>：不是所有"看起来复杂"的任务都适合 Agent。一个让 Agent"根据需求自动拆分微服务"的 proposal——复杂度高、价值高，但关键能力卡住了：Agent 不理解组织的团队结构、历史技术债、现有系统的隐含约束。正确的做法是缩小范围：让 Agent 只做"根据现有模块依赖关系生成可能的拆分方案"，最终的架构决策由人做。
+
+<hr>
+
+<h2>陷阱清单</h2>
+
+<p>前面每条路都有坑。这里把最有杀伤力的几个单独拉出来。</p>
+
+<strong>陷阱一：把"看起来简单"归为机械，"看起来难"归为认知。</strong> 判断标准只有一个：能不能写成明确步骤。追一个复杂信号链听起来很难，但步骤确定→机械。判断一条兼容逻辑该不该保留听起来简单，但没有步骤→认知。标准错了，整个二分就废了。
+
+<strong>陷阱二：二分之后看不起机械 debug。</strong> 机械 debug 不是低端工作——它是认知 debug 的前提。信号追不对，判断建立在错误信息上。把机械 debug 自动化掉，省出来的时间投到认知 debug 上，而不是投到"再写几个 feature"上。
+
+<strong>陷阱三：把 postmortem 做成静态文档。</strong> 多数团队的 postmortem 写完就没人看了。真正的预防是让知识自动回流到拦截环节：你上次在这里踩的坑，下次有人走同一条路时，系统在他踩下去之前拉他一把。如果上一次 postmortem 的结论没有被编码进任何自动化流程——postmortem 只是把 debug 时间从"修 bug"变成了"开会"。
+
+<strong>陷阱四：以为画完边界就完事了。</strong> 边界是活的。每次新的 incident 出现，都可能意味着有一条你没画的边界被踩到了。把每次越权事故变成一次边界更新。同时不要过度管控——Tier 0 让 AI 自由做，Tier 1 适度放手，只有 Tier 2–3 才需要重管控。
+
+<strong>陷阱五：看到某个场景 Agent 成功了就推全量。</strong> Agent 的错误模式不是均匀分布的——它在某些输入上表现完美，在某些输入上完全崩溃。推全量之前必须做长时间影子部署和渐进放量（Baidu 推荐 5% → 20% → 100%）。
+
+<strong>陷阱六：15 分钟规则变成"15 分钟没修完就放弃"。</strong> 不是放弃——是换一个更小的实验。不是降低标准，是换策略。你卡住的原因不是不够聪明，是你只有一个画面。动一下，制造第二个画面。
+
+<hr>
+
+<h2>作者的局限</h2>
+
+<p>读到这里，以下是需要打的折扣。</p>
+
+<p>Wilson Research 的数据来自 2018 年。Agent 技术 2024–2026 才大规模落地，12 个月后的实际占比可能已有显著变化。40% 是行业均值锚点，不是永恒常数——用它定位问题，不用它预测未来。</p>
+
+<p>Harness Engineering 的四步法来自一个项目的个人经验。在小团队中运转良好，但在 50+ 人的跨团队组织中，边界画法、工作流设计、知识库管理会面临不同的复杂度——权限模型、审批链、跨团队依赖都需要额外设计。</p>
+
+<p>六步法框架来源于芯片验证 debug + 军事历史类比。在纯软件分布式系统中，回滚（定位引入 commit）和并案（按 log pattern 聚类）的可用性不同——软件系统的小改动也可能有大影响，commit 粒度更细。框架可迁移，每步的实现需要适配。</p>
+
+<p>最强反对意见："40% 的数据八年了，一个足够强的 Coding Agent 可能直接在写代码阶段消除大部分 bug，你不需要六步法、不需要四象限、不需要驾驭工程。"对此的回应：这个反驳混淆了"设计侧 bug"和"验证侧 bug"。Coding Agent 可能减少设计侧 bug，但验证侧发现的 bug 来源复杂——spec 歧义、模块间交互、配置冲突——这些不是写代码阶段能消除的。机械 debug 会降，但不会归零；认知 debug 反而可能因系统复杂度增加而上升。</p>
+
+<hr>
+
+<h2>如果只带走三句话</h2>
+
+<ul><li><strong>40% 不会消失</strong>——它从"手动 grep"变成"判断 AI 给你的结果对不对"。机械 debug↓，认知 debug↑。</li></ul>
+<ul><li><strong>第一刀砍在 bug 产生之前</strong>——预防比高效 debug 的 ROI 高一个数量级。但预防不是口号，是把 postmortem 变成自动拦截系统。</li></ul>
+<ul><li><strong>AI 能帮你写代码，但不能帮你画边界</strong>——画边界这件事，是你永远不能外包给 AI 的。</li></ul>
+
+<hr>
+
+<h2>Monday Morning</h2>
+
+<p>明天上班，做三件事。不需要审批，不需要预算，今天就动手。</p>
+
+<strong>一、做一次 debug 时间分拆。</strong> 找最近一个项目，把所有 debug 活动列出来。每一项问：能不能写成 SOP？能→机械，不能→认知。算出两个占比。如果这是你第一次做这件事，你大概率会发现两个占比加起来不等于 100%——中间有一个"混合"地带。把它单独标出来，下次再拆。目标不是精确，是建立觉知。
+
+<strong>二、对你团队的 AI 任务清单过一次三维选型。</strong> 列出所有在用 AI 的环节，每个过三个问题：决策树能画出来吗？（能→Workflow）每次任务的成本预算多少？（低→Workflow）关键能力卡在哪一步？（卡在非 LLM 能解决的→缩小范围）。标记出哪些过度工程了（该用 Workflow 用了 Agent）、哪些可以升级。90% 的讨论在第一问就结束了。
+
+<strong>三、找上一次 postmortem 的结论，检查闭环。</strong> 上一次 postmortem 说了什么？那个结论被编码进任何自动化流程了吗？如果没有——今天就做。用一条规则或一个 git hook，不需要完整系统。完成标准：上一次 postmortem 的核心结论在某个自动化环节被检查。
+
+<hr>
+
+<h2>关键术语速查</h2>
+
+<table><tr><td>术语</td><td>含义</td><td>和你想的不一样在哪</td></tr></table>
+
+<table><tr><td>机械 debug / 认知 debug</td><td>按"能否写成 SOP"划分，不是按难度</td><td>追复杂信号链→机械；判断兼容逻辑是否保留→认知</td></tr></table>
+<table><tr><td>验证四象限</td><td>面向业务/技术 × 可自动化/需人工</td><td>不是 test type 分类，是指挥精力分配的框架</td></tr></table>
+<table><tr><td>六步法</td><td>并案/比差/以动制静/回滚/人类直觉/经验回流</td><td>不是 checklist，是信息博弈框架</td></tr></table>
+<table><tr><td>驾驭工程</td><td>管理人+AI+知识库+工作流的治理体系</td><td>不是"写好 prompt"，是架构层面的治理</td></tr></table>
+<table><tr><td>Tier 风险分级</td><td>按影响面和不可逆程度分 T0–T3</td><td>不是"大改/小改"二分，三行状态机改动=Tier 3</td></tr></table>
+<table><tr><td>Workflow vs Agent</td><td>区别在"谁决定下一步"</td><td>有 LLM 参与 ≠ Agent，判断标准是决策树能不能画出来</td></tr></table>
+
+<p>完整术语词典见 [GLOSSARY.md](./GLOSSARY.md)。</p>
+
+</body>
+</html>

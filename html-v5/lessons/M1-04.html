@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>04 · 24h 交付一个工业级IP，跑通基础功能验证</title>
+<style>:root{--bg:#1a1a1a;--card:#252525;--text:#e0e0e0;--accent:#ffb347;--muted:#999;--green:#7ecf8a;--blue:#6db3f2;--red:#f27d6d;--purple:#c5a3ff;--border:#3a3a3a}*{margin:0;padding:0;box-sizing:border-box}body{background:var(--bg);color:var(--text);font-family:"PingFang SC","Noto Sans SC",sans-serif;line-height:2.1;font-size:20px;max-width:780px;margin:0 auto;padding:32px 24px 80px;letter-spacing:.04em;word-spacing:.1em}h1{font-size:34px;line-height:1.45;margin-bottom:12px;color:#fff;font-weight:700}.subtitle{color:var(--muted);font-size:18px;margin-bottom:10px}.hook{color:var(--accent);font-size:22px;font-weight:600;margin-bottom:36px;padding:14px 18px;border-left:4px solid var(--accent);background:#2a2a2a;border-radius:0 8px 8px 0}hr{border:none;border-top:1px solid var(--border);margin:36px 0}h2{font-size:26px;color:#fff;margin:36px 0 14px;padding-bottom:6px;border-bottom:2px solid var(--border)}h3{font-size:22px;color:#fff;margin:24px 0 10px}h4{font-size:20px;color:var(--accent);margin:20px 0 8px}p{margin-bottom:14px}ul,ol{margin:10px 0 20px 24px}li{margin-bottom:8px}blockquote{background:#2a2a2a;border-left:4px solid var(--accent);padding:14px 18px;margin:16px 0;border-radius:0 8px 8px 0;color:var(--accent);font-weight:600}code{background:#333;color:var(--accent);padding:2px 8px;border-radius:4px;font-size:18px}pre{background:#111;padding:16px;border-radius:8px;overflow-x:auto;margin:16px 0;font-size:16px;line-height:1.6}pre code{background:none;color:var(--green);padding:0}table{width:100%;border-collapse:collapse;margin:16px 0;font-size:18px}th{background:#333;color:#fff;padding:10px 12px;text-align:left;font-weight:700}td{padding:10px 12px;border-bottom:1px solid var(--border)}.key-line{background:#2a2a2a;border-left:4px solid var(--accent);padding:14px 18px;margin:16px 0;font-size:21px;font-weight:600;color:#fff;border-radius:0 8px 8px 0}.tag{display:inline-block;background:#333;color:var(--muted);font-size:14px;padding:2px 8px;border-radius:4px;margin-right:6px}strong{color:#fff}em{color:var(--accent);font-style:normal}</style>
+</head>
+<body>
+<div class="tag" style="background:#534AB7;color:#fff;font-size:16px;padding:4px 14px">M1 跑通 · 04</div>
+<h1>24h 交付一个工业级IP，跑通基础功能验证</h1>
+<hr>
+
+
+<p>芯片智能体生成得再快，也只加快了执行端；代码越来越便宜，判断越来越贵。若没有准绳、门禁与短闭环，AI 只是超级个体玩具——写得出来，证明不了，更签不了。</p>
+
+<p>本文以工业级 IP 的实际执行过程复盘为例，演示如何用智能体实现 24h 交付一个工业级 IP、跑通基础功能验证。用的工具是 Claude Code + DeepSeek-V4Pro。</p>
+
+<p>这个例子是 UART-DMAC（uart_dmac），带 DMA、RS-485、IrDA、自动波特与内外两种 DMA 模式。规格、验收标准与接口时序已经三分。它不是「认知过载的产物」，而是实现与验证时会诱发过载的典型 DUT，深水区在并发与 DMA 仲裁。</p>
+
+<p>24h 要签的是基础功能验证，PPA 后置。本 DUT 优先级写死为：</p>
+
+<strong>P0_AC > concurrency > coverage > timing/area</strong>
+
+<p>请勿照搬「8 维 Timing 最高」。工业界常说的八维约束（Timing / Area / Clocks / Verification / Reuse / Power / DFT / Vendor Policies）在本 DUT 的 24h 基础功能验证中被主动重排——功能与并发优先，Timing/Area 后置。</p>
+
+<p>复杂度越高，这套方法越值钱。入门可用小 UART，uart_dmac 是工业级，深水区仍在并发与仲裁。人在环路里逐条给反馈，工程上扛不住；除了关键节点的人签核，剩下只能靠工具反馈。验证像一张网，网的质量决定命中的质量与效率。要抄的是纪律与阶段，不是操作手册。</p>
+
+<p>让 AI 执行，让机器裁判，让人签核。</p>
+
+<hr>
+
+<h2>一、三个死结，以及必须登记的 cross_fps</h2>
+
+<p>写 RTL 时若同时转动「功能对不对、结构好不好、边界漏没漏」，工作记忆会被打爆，并发与耦合最先掉——这是认知过载。</p>
+
+<p>这个 DUT 上认知过载的具体爆发点如下：</p>
+
+<table><tr><td>#</td><td>并发交互</td><td>脑子里要同时跟踪什么</td></tr></table>
+
+<table><tr><td>1</td><td>FIFO ↔ DMA 并发</td><td>DMA 从 RAM 取数填 TX FIFO / 从 RX FIFO 取数写 RAM，同时软件通过 SFR 读写数据寄存器——指针不被破坏、不互相覆盖、不死锁</td></tr></table>
+<table><tr><td>2</td><td>线路状态读清语义</td><td>读状态寄存器清溢出/Break；校验/帧错误随数据出队更新——两个操作如果在同拍发生，竞态是否丢失标志？</td></tr></table>
+<table><tr><td>3</td><td>DMA 模式互斥切换</td><td>模式切换须两个通道均 idle——busy 时非法切换，实现选忽略还是安全处理？行为必须自洽</td></tr></table>
+<table><tr><td>4</td><td>RX 优先仲裁</td><td>TX-fetch 和 RX-store 争总线主端口时 RX 先拿，但 TX 等太久会不会导致 TX FIFO 空？</td></tr></table>
+<table><tr><td>5</td><td>硬件流控字节级门控</td><td>流控信号为无效时不打断进行中的帧，只在字节边界检查</td></tr></table>
+<table><tr><td>6</td><td>RS-485 驱动使能保护时序</td><td>驱动使能提前拉有效，帧结束后保持一段时间再撤销——与半双工切换、电平反相如何协调？</td></tr></table>
+<table><tr><td>7</td><td>多错误标志并发</td><td>同一字节同时出现多种错误标志，均须正确传递且不互相覆盖</td></tr></table>
+<table><tr><td>8</td><td>DMA 部分包刷新</td><td>接收超时触发残余字节写入，此时多个计数器必须同步</td></tr></table>
+
+<p>改一处就怕引入新 Bug，越怕越不敢改，代码越烂，最后「能跑就别动」——恐惧与熵增。</p>
+
+<p>自然语言规格有歧义，Bug 在十行里暴露与在千行里暴露，成本差一个数量级——歧义与延迟。</p>
+
+<p>对策是把验证顺序反过来：先定义什么是对的，再实现。这是 R2-ChipTDD 的第一性原理。试错成本拆成：</p>
+
+<strong>F = G × H × I</strong>（影响范围 × 反馈代价 × 对齐损耗）
+
+<p>三个因子一起压。</p>
+
+<p>Spec、Acceptance Criteria、Timing 已有三分，缺的不是再多一份文档，而是按功能、结构契约、并发交互三轴显式编排。</p>
+
+<p>下列八点必须登记为跨特性 cross_fps，不可删，随特性合并即跑，不攒到第三刀：</p>
+
+<ul><li>FIFO 与 DMA 同时访问时的并发正确性与指针安全（AC-CONC-07）</li></ul>
+
+<ul><li>线路状态寄存器的读清语义及与出队的交互（AC-STAT-12）</li></ul>
+
+<ul><li>两种 DMA 工作模式切换时的互斥与安全处理（AC-MODE-19）</li></ul>
+
+<ul><li>接收方向在总线仲裁中的优先权保证（AC-ARB-04）</li></ul>
+
+<ul><li>硬件流控在字节边界的门控行为（AC-FLOW-11）</li></ul>
+
+<ul><li>RS-485 驱动使能信号的前/后保护时序（AC-PROT-08）</li></ul>
+
+<ul><li>同一字节上多种错误标志的并发置位与传递（AC-ERR-15）</li></ul>
+
+<ul><li>DMA 接收超时触发的残余字节写入及字节使能正确性（AC-DMA-22）</li></ul>
+
+
+<p>Oracle 对功能；Harness 是反馈骨架与闸门；边界更多靠 Oracle、定向并发与覆盖率。</p>
+
+<hr>
+
+<h2>二、智能体怎么构建</h2>
+
+<p>智能体不是会聊天的大模型，而是有准绳、有记忆、有工具、有门禁、有纪律的系统。它跑在一套 harness 骨架上。那是工作流骨架，不是某个模型品牌的神话。</p>
+
+<p>它由人、AI 与工具组成，再加记忆、安全阀与可复用知识。</p>
+
+<p>人只做三件事：定义目标（GOAL.md）、定义验收标准（VERIFICATION_CATALOG.md）、处理例外与灰区签核。人不再把盯波形当唯一裁判，签字权不交出去。日常可自动，签核停人，禁止声称「人几乎不干预」。</p>
+
+<p>AI 负责规划、探索、决策、解读反馈。给轻量护栏而非重度脚本——强模型被脚本写死会阉割长程规划，弱模型自主过大易灾难性遗忘。</p>
+
+<p>工具侧：仿真负责功能对拍，需要时再综合给 PPA 反馈。EDA 提供地面真相，模型不自评。功能门禁是「跟 Golden 对不上就丢」，可用对拍、equiv_check 或 BMC。勿用 SEC 假称一切门禁——Python Golden 不等于形式化 SEC 的输入。</p>
+
+<p>三道护栏：</p>
+
+<ul><li>Refuter：在改动提出前先尝试证明它会破坏高优先级约束，证得出就拒绝。</li></ul>
+
+<ul><li>验证门：改完立刻查，优先级服从 P0_AC > concurrency > coverage > timing/area。</li></ul>
+
+<ul><li>记忆锁 INDEX.md：每轮写、下轮先读，防灾难性遗忘。</li></ul>
+
+
+<p>三个文件是宪法。</p>
+
+<ul><li>GOAL.md：24h 签出等于基础功能验证通过；写明上述优先级；PPA 写在 Walking Skeleton 已绿之后。</li></ul>
+
+<ul><li>VERIFICATION_CATALOG.md：每条 P0 AC-ID 映射成最小失败检查，并把 cross_fps 单独打标、不可删。</li></ul>
+
+<ul><li>INDEX.md：记忆锁，记录版本、失败策略、已合并特性、对拍是否通过。</li></ul>
+
+
+<p>用 Python（Golden Model + 最小失败检查）是为了执行 AC，而不是替代 AC。AC 始终是唯一准绳，Python 只是它的可执行投影。</p>
+
+<p>Golden 必须来源于 Spec、Acceptance Criteria 和 Timing 文档，绝不能先有 RTL 再倒挤参考模型。</p>
+
+<p>推荐顺序： 人先写或先审一版最小 Golden 骨架 → Agent 根据 Spec/AC 进行编译式补充（严禁凭空 invent）→ 人再次审核。</p>
+
+<p>干净的执行顺序必须是： Spec / AC →（人签核或异构模型产出）Golden 与失败断言 → RED 阶段全部 FAIL → 才进入 GREEN 生成 RTL → 对拍与门禁。</p>
+
+<p>必须严防的硬坑是：同一个模型既写 Golden 又写 RTL。一旦理解偏差，两边会错得一致，最终变成假 PASS。对策是使用异构模型、隔离上下文，并始终以 AC 为唯一准绳。</p>
+
+<p>Python Golden 是必须存在的。测试平台的外壳可以选择 pyuvm（推荐路径之一，但不是唯一铁律）；早期阶段也可以使用更轻量的 pytest + cocotb。无论外壳用什么，Golden 侧必须具备 cross 钩子，不能只有按功能拆分的文件。</p>
+
+<p>高置信度优化策略可以写成可动态加载的 Skill，但必须明确否定一件事：每特性 GREEN 后立刻重 PPA、上十几条策略、刷 feature 级 WNS——这些只能放在骨架已绿之后的可选 PPA，不得当 GREEN 主线。</p>
+
+<p>Harness 之内 Agent 自主，Harness 之外人签核：日常自动跑到对拍门禁，人只在灰区与规格相关选择上停下来签字。</p>
+
+<hr>
+
+<h2>三、完整过程：Phase 0 → 1 → 1.5 → 2</h2>
+
+<p>口诀是：先隔离、再闭环、再拼合。</p>
+
+<p>第二刀必须被明确叫出来：单特性内短闭环，不是端到端。跨特性并发随合并一起跑，不攒到第三刀。PPA 与 Timing 严格在 Walking Skeleton 已绿之后。</p>
+
+<h3>Phase 0 · 第一刀（DITL + Stub）</h3>
+
+<p>先读 GOAL.md、VERIFICATION_CATALOG.md、INDEX.md，并确认优先级为 P0_AC > concurrency > coverage > timing/area。</p>
+
+<p>第一刀是 DITL + Stub，不切「厨房水槽模块」。切缝如下：</p>
+
+<ul><li>C0 SFR/命令管道</li></ul>
+
+<ul><li>C1 比特时基（波特/自动波特）</li></ul>
+
+<ul><li>C2 TX 管道（FIFO + 移位）</li></ul>
+
+<ul><li>C3 RX 管道（采样 + FIFO + 错误标志）</li></ul>
+
+<ul><li>C4 DMA 管道（内置主控；外置握手为薄附属）</li></ul>
+
+
+<p>横切用 Stub 隔开：流控、Modem、协议增强、中断聚合。把上一节八点登记进 cross_fps，把 Stub 契约写入 INDEX 并锁定。</p>
+
+<p>Pipe、Valve、Translator 不是第一刀的唯一语言——它们主要在第三刀冻结 ICD；第一刀仍是 DITL、多视角与 Stub。</p>
+
+<h3>Phase 1 · 第二刀（特性内短闭环；可并行）</h3>
+
+<p>对 C1、C2、C3、C0、C4 可并行推进。</p>
+
+<ul><li>RED：从 Catalog 抽取该特性 P0，写出 Python Golden 与最小失败检查，跑测必须全部 FAIL，否则先修断言。</li></ul>
+
+<ul><li>GREEN：用最简 RTL，仿真对 Golden，门禁用对拍或 equiv_check/BMC（勿假称 SEC）；失败则回滚重生成。</li></ul>
+
+<ul><li>轻重构（LIGHT_REFACTOR）：lint 与结构清理，禁止重 PPA，禁止插流水。</li></ul>
+
+<ul><li>合并该特性后立刻跑与之相关的 cross_fps，并更新 INDEX。</li></ul>
+
+
+<p>明确否定：串行做完一个特性再进下一个，并把并发留到最后。</p>
+
+<h3>Phase 1.5 · Walking Skeleton</h3>
+
+<p>先建 TX↔RX 最小 loopback，再加一次内置 DMA。压力项重点覆盖 AC-ARB-04、AC-MODE-19、AC-DMA-22、AC-STAT-12、AC-ERR-15，以及 MODE 非法切换。</p>
+
+<p>失败则回到 Phase 0 调整 Stub 或切缝，而不是用综合分数掩盖。24h 基础功能验证的签出，更看骨架是否吃掉这些死结。</p>
+
+<h3>Phase 2 · 第三刀</h3>
+
+<p>冻结 ICD（Pipe / Valve / Translator，全部同源自已锁定的契约），将全部特性拼合。</p>
+
+<p>首先运行全量 P0 验收与覆盖率门禁。</p>
+
+<p>只有在骨架已经全部变绿、覆盖率门禁通过之后，才允许进入 PPA。PPA 必须坚持「功能之后再做时序与面积」，不得提前。</p>
+
+<p>连续三次无改善，则换策略或退回切分。</p>
+
+<p>人签核覆盖规格相关灰区实现选择与最终放行决策，并将结果锁定进 INDEX。</p>
+
+<p>三条硬规则：</p>
+
+<ul><li>绝不优化掉仍失败的 P0。</li></ul>
+
+<ul><li>骨架未绿，绝不做全片 PPA。</li></ul>
+
+<ul><li>绝不声称「人几乎不干预」——日常可自动，签核必须停人。</li></ul>
+
+
+<p>功能等价是硬约束，PPA 是软目标。硬约束的落地门禁是对拍与 equiv_check，而不是把「SEC」当成万能词随意使用。</p>
+
+<p>顶层 hierarchy-preserving 综合与机器可读 ICD 的产出，放在特性拼合之后执行。</p>
+
+<p>Walking Skeleton 失败时，必须回到 Phase 0 调整 Stub 或切缝。第三刀在覆盖率门禁通过之后才进入可选 PPA；「连续三次无改善则换策略」的触发点，严格位于骨架已绿后的可选优化阶段，而不是每个特性刚刚变绿的那一刻。</p>
+
+<hr>
+
+<h2>四、例子：RX 与内置 DMA TX</h2>
+
+<strong>以 RX 为例，按以下步骤执行：</strong>
+
+<ul><li>RED：从对应 P0 项提取 Feature Point。</li></ul>
+
+<ul><li>编写 Golden，明确描述：起始位检测方式、16x 过采样时多数表决、毛刺滤波窗、错误标志随字节入队规则。</li></ul>
+
+<ul><li>运行测试，要求全部 FAIL。</li></ul>
+
+<ul><li>GREEN：生成最简单的移位寄存器 + 计数器 + 简单滤波逻辑。</li></ul>
+
+<ul><li>与 Golden 仿真对拍，不匹配即丢弃。</li></ul>
+
+<ul><li>本阶段禁止结构优化和任何 PPA 动作。</li></ul>
+
+<ul><li>轻重构仅做清理，结果写入 INDEX。</li></ul>
+
+<ul><li>若 TX 与 DMA 已合并，立即运行与 RX 相关的 cross_fps。</li></ul>
+
+<ul><li>注意：不得声称「特性内已验完仲裁」。仲裁属于 AC-ARB-04 等跨特性项，骨架阶段才专门处理。</li></ul>
+
+
+<strong>以内置 DMA TX 为例，按以下步骤执行：</strong>
+
+<ul><li>RED：从对应 P0 项抽取 Feature Point。</li></ul>
+
+<ul><li>明确将仲裁相关项归入 cross_fps 与骨架阶段，不得在单特性内假装已验完。</li></ul>
+
+<ul><li>编写 Golden，覆盖以下行为：从源地址取数、解包写入 TX FIFO、计数至设定长度、置位完成标志、环形缓冲回绕、burst 成组传输。</li></ul>
+
+<ul><li>运行测试，要求全部 FAIL。</li></ul>
+
+<ul><li>GREEN：生成最简单状态机 IDLE → FETCH → WRITE_FIFO → DONE。</li></ul>
+
+<ul><li>与 Golden 进行仿真对拍，通过即可。</li></ul>
+
+<ul><li>轻重构仅执行结构清理。</li></ul>
+
+<ul><li>全片 PPA 优化及高置信度策略一律留到骨架阶段通过之后再启用。</li></ul>
+
+<ul><li>将本次成败结果写入 INDEX，供后续同类决策优先读取。</li></ul>
+
+
+<p>若仍有人把仲裁类验收项塞进单特性 RED，那是错误的。它必须进入 cross_fps，并在 Walking Skeleton 的压力集中专门验证。</p>
+
+<p>轻重构阶段可以做 CSE、Register Duplication 一类结构性清理，但严禁升级成全片 PPA 主线。全片 PPA 以及综合分数加权、关键路径插流水等后置策略，只能在骨架阶段全部变绿之后才允许启用。即使到了可选 PPA 阶段，每一次改写仍然必须先通过对拍门禁——对不上就直接丢弃，不参与任何评分。</p>
+
+<p>智能体从来不是一次生成完美代码，而是在严格门禁保护下小步迭代、持续收敛。真正可复制的是这套节奏与纪律，而不是某一版具体的 Verilog 文本。</p>
+
+<hr>
+
+<h2>五、踩坑</h2>
+
+<p>功能门禁不硬就做 PPA，功能会被悄悄破坏；门禁口径是对拍不过就丢。只看 WNS 不看 TNS，多路径累计会恶化。面积过激且无惩罚项，时序会反弹。跨模块路径一开始不做寄存器隔离，后面优化会非常痛。强模型脚本写死，规划被废。弱模型自主过大，灾难性遗忘。跳过 RED，过载且边界全漏。没有 INDEX，跨轮丢状态。把度量变目标，会刷无意义测试。Skill 加载错误，比没有更有害。</p>
+
+<p>还必须把这些否决写进纪律：</p>
+
+<ul><li>不要串行做完特性再验并发；</li></ul>
+
+<ul><li>不要 GREEN 后立刻上十几条策略刷 feature 级 WNS；</li></ul>
+
+<ul><li>不要用 SEC 假称一切门禁；</li></ul>
+
+<ul><li>不要把 Pipe/Valve/Translator 当第一刀唯一语言；</li></ul>
+
+<ul><li>不要声称人几乎不干预。</li></ul>
+
+
+<p>把并发留到最后，等于把隔离失败推迟到集成夜；GREEN 后立刻刷 WNS，等于在功能门禁未稳时奖励假优化。</p>
+
+<p>同模写 Golden 又写 RTL，是假绿。横切切成协议全家桶，是假隔离。单特性全绿但 cross_fps 没跑，不够签出。</p>
+
+<hr>
+
+<h2>六、立刻能做什么</h2>
+
+<p>把 Spec、Acceptance Criteria、Timing 三份规格放进工作区；手写 GOAL、VERIFICATION_CATALOG、INDEX，优先级写成 P0_AC > concurrency > coverage > timing/area。</p>
+
+<p>建议先按全部 P0 列出最小 Golden 覆盖表（AC-ID → Golden 模块 → 测试名），并决定人写骨架还是 Agent 生成后人审，再进 RED。</p>
+
+<p>然后按 Feature Point 推进： RED 必须 FAIL → GREEN 只求对拍过 → 轻重构 → 合并跑 cross_fps → Walking Skeleton 专吃关键并发与仲裁项 → 第三刀冻结 ICD、跑覆盖，骨架绿后再谈 PPA；连续三次无改善则换策略或回切分；灰区由人签核。</p>
+
+<p>复杂度越高，传统路径里过载、恐惧与延迟放大越厉害，纪律越值钱。传统方法往往数周到数月；有纪律时，基础功能验证的收敛可以压到天级——这里的「功能」对应 24h 签出，不是把 PPA 绑进主目标。</p>
+
+<hr>
+
+<h2>关键点</h2>
+
+<p>回过头看整条路径，真正决定成败的，从来不是某个模型叫什么名字，也不是那十几条优化策略本身。</p>
+
+<p>是认知分离有没有被严格执行：RED 只做分析，GREEN 只求通过，轻重构才允许动结构，而且绝不能一绿就冲进全片 PPA。</p>
+
+<p>是功能门禁有没有被守住：对拍不过就丢，equiv_check 不过就丢，坏结果绝对不允许进入下一阶段。</p>
+
+<p>是记忆有没有被建立：INDEX 记录每一次成败，后续决策先读历史，而不是每次从零开始碰运气。</p>
+
+<p>是优先级有没有被贯彻：P0_AC 永远高于并发，并发高于覆盖率，覆盖率高于时序与面积。骨架没绿，就不谈全片优化。</p>
+
+<p>当这些纪律同时成立时，智能体才不再是「让大模型随便写写」，而变成一个有依据、有门禁、有记忆、能小步收敛的系统。</p>
+
+<p>uart_dmac 用传统方法写起来痛苦、改起来害怕、验起来漫长；用这套纪律，它第一次变成可拆解、可保护、可收敛的对象。</p>
+
+<p>换一颗 IP，换规格与 Catalog，不换这条优先级，不换「第二刀必须叫出来、合并就跑 cross_fps、骨架绿后才允许 PPA」。</p>
+
+<p>真正可被复制的，不是某一版 Verilog 文本，而是这条工作流本身。</p>
+
+<p>功能签出了，PPA 才有下一场讨论的资格。</p>
+
+<p>让 AI 执行，让机器裁判，让人签核。</p>
+
+<p>这才是我们真正留下的东西。</p>
+</body>
+</html>

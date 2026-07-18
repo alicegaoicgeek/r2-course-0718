@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>19 · r2-debug：八段闭环驱动负反馈，让出错回流预防</title>
+<style>:root{--bg:#1a1a1a;--card:#252525;--text:#e0e0e0;--accent:#ffb347;--muted:#999;--green:#7ecf8a;--blue:#6db3f2;--red:#f27d6d;--purple:#c5a3ff;--border:#3a3a3a}*{margin:0;padding:0;box-sizing:border-box}body{background:var(--bg);color:var(--text);font-family:"PingFang SC","Noto Sans SC",sans-serif;line-height:2.1;font-size:20px;max-width:780px;margin:0 auto;padding:32px 24px 80px;letter-spacing:.04em;word-spacing:.1em}h1{font-size:34px;line-height:1.45;margin-bottom:12px;color:#fff;font-weight:700}.subtitle{color:var(--muted);font-size:18px;margin-bottom:10px}.hook{color:var(--accent);font-size:22px;font-weight:600;margin-bottom:36px;padding:14px 18px;border-left:4px solid var(--accent);background:#2a2a2a;border-radius:0 8px 8px 0}hr{border:none;border-top:1px solid var(--border);margin:36px 0}h2{font-size:26px;color:#fff;margin:36px 0 14px;padding-bottom:6px;border-bottom:2px solid var(--border)}h3{font-size:22px;color:#fff;margin:24px 0 10px}h4{font-size:20px;color:var(--accent);margin:20px 0 8px}p{margin-bottom:14px}ul,ol{margin:10px 0 20px 24px}li{margin-bottom:8px}blockquote{background:#2a2a2a;border-left:4px solid var(--accent);padding:14px 18px;margin:16px 0;border-radius:0 8px 8px 0;color:var(--accent);font-weight:600}code{background:#333;color:var(--accent);padding:2px 8px;border-radius:4px;font-size:18px}pre{background:#111;padding:16px;border-radius:8px;overflow-x:auto;margin:16px 0;font-size:16px;line-height:1.6}pre code{background:none;color:var(--green);padding:0}table{width:100%;border-collapse:collapse;margin:16px 0;font-size:18px}th{background:#333;color:#fff;padding:10px 12px;text-align:left;font-weight:700}td{padding:10px 12px;border-bottom:1px solid var(--border)}.key-line{background:#2a2a2a;border-left:4px solid var(--accent);padding:14px 18px;margin:16px 0;font-size:21px;font-weight:600;color:#fff;border-radius:0 8px 8px 0}.tag{display:inline-block;background:#333;color:var(--muted);font-size:14px;padding:2px 8px;border-radius:4px;margin-right:6px}strong{color:#fff}em{color:var(--accent);font-style:normal}</style>
+</head>
+<body>
+<div class="tag" style="background:#0F6E56;color:#fff;font-size:16px;padding:4px 14px">P3 Verismart · 19</div>
+<h1>r2-debug：八段闭环驱动负反馈，让出错回流预防</h1>
+<hr>
+
+
+<p>调试不是证明自己猜对了。调试是通过每一步行动制造新信息，让下一步选择更准。</p>
+
+<p>验证工程师把项目时间的近 40% 花在调试上。这个比例还在增长。UVM 提升了生产效率，但也带来了 UVM 特有的调试难题——工程师仍然在手动 grep、手动追波形、手动拼因果链。</p>
+
+<p>r2-debug 是验证失败后的 AI 原生调试工厂。把人点 Verdi、人 grep log、人追因果链，变成结构化证据链：先压缩 log，再查波形回答何时，再追 RTL 因果回答为何，在「观察 → 假设 → 验证 → 精化」的循环里收敛根因。</p>
+
+<p>兵法层是六法，工厂层是八段。六法教你怎么选、怎么动；八段把出错沉淀回预防。两层咬合，才是负反馈。</p>
+
+<hr>
+
+<h2>第一层 · 开场：下一步由上一步告诉你</h2>
+
+<p>1960 年，蒙哥马利访华。毛主席说：四渡赤水才是平生得意之作。</p>
+
+<p>1935 年 1 月，遵义。40 万国军围过来，红军只剩 3 万。北边长江被川军封死，东边南边湘军中央军压过来，西边滇军占金沙江。天罗地网。</p>
+
+<p>这一圈敌人里，王家烈的黔军是软柿子。不是黔军最弱——是王家烈跟老蒋有仇，薛岳的中央军不会救他。打穿黔军，向西进云南的路就通了。</p>
+
+<p>三渡赤水前，派一个师佯攻鲁班场。蒋介石上当，调重兵向西。毛泽东马上放弃鲁班场，主力从茅台渡口西渡。佯攻的目的不是占鲁班场，是逼蒋介石做一个确定的反应。他一动，暴露了两件事：西面不是真方向，东面防线松了。</p>
+
+<p>四渡之后急行军直扑贵阳。蒋介石慌了，急调滇军回来护驾。金沙江防线空了。红军渡江，扬长而去。打贵阳目的不是攻城，是让守住金沙江的人离开金沙江。</p>
+
+<p>每一步都不是事先定的。一渡发现北面太硬，回头打东面。二渡发现佯动有效，三渡就玩更大。三渡调走了滇军，四渡就往金沙江冲。下一步的方向，是上一步的结果告诉你的。</p>
+
+<hr>
+
+<h2>第二层 · 战略地图：四段式落地为六法</h2>
+
+<p>r2-debug 六法对应四渡赤水四段式：找到缝隙、观察变化、制造信息、直捣中枢。落地为六法：并案、比差、以动制静、回滚、人类直觉、经验回流。</p>
+
+<table><tr><td>四渡赤水</td><td>调试动作</td><td>r2-debug 覆盖</td></tr></table>
+
+<table><tr><td>软柿子 / 找缝隙</td><td>分桶后选信息增益最大的先修</td><td>并案</td></tr></table>
+<table><tr><td>比差 / 以动制静</td><td>先看变化，看不懂就做实验</td><td>比差 + 以动制静</td></tr></table>
+<table><tr><td>佯动 / 制造信息</td><td>做实验看变化，不脑补原因</td><td>以动制静</td></tr></table>
+<table><tr><td>直捣中枢</td><td>攻击 bug 的存在条件而非本体</td><td>回滚</td></tr></table>
+<table><tr><td>信息降维</td><td>从海量数据中看到结构</td><td>人类直觉</td></tr></table>
+<table><tr><td>反馈闭环</td><td>每次验证结果校准下一步方向</td><td>经验回流</td></tr></table>
+
+<hr>
+
+<h2>第三层 · 并案：分桶之后先打哪个</h2>
+
+<p>选「软柿子」的标准不是最容易修，是修了之后能最大程度改变你对整个 bug 集合的信息格局。</p>
+
+<p>四渡赤水选王家烈，三层原因：表面是黔军弱；深层是王蒋有结构性矛盾，薛岳不会真救；战略是贵州方向连接云南，打穿黔军等于打开向西的逃生通道。</p>
+
+<p>映射到调试：某个 failure cluster 的 log 最清晰；根因模块与其他模块耦合最松，改了不引发连锁；修了这个 cluster 能暴露其他 failure 的根因线索。</p>
+
+<p>并案把 300 个 failure 按模式相似度聚成 3–5 类。但它不告诉你先打哪一类。工具负责「这些 failure 看起来是同一类」；人负责判断「修哪一类能让我看到最多的新线索」。</p>
+
+<p>可操作标准：并案完成后，别按「哪类 failure 数量最多」排序，按「哪类的根因模块和其他模块共享信号最少」排序。共享越少，修了越不会引发新问题，越适合当第一刀。</p>
+
+<p>按 test name 分组会被身份标签误导——同一个 test 在不同 commit 失败，原因可能完全不同；不同 test 失败，可能共享同一个模块的 bug。按 log 异常行为模式分组，分出来的是 bug 自己的行为特征。分类维度一变，你能看到的东西就变了。这和四渡赤水不按「谁是国军」、而按「谁挡在我要去的方向上」判断威胁，是同一个逻辑。</p>
+
+<hr>
+
+<h2>第四层 · 比差与以动制静：先看变化，看不懂就做实验</h2>
+
+<p>两步走：先比差，再以动制静。比差是被动观察——别人已经告诉你哪变了。以动制静是主动实验——你自己制造变化看结果。</p>
+
+<p>比差只看两个版本之间变了的模块和信号，不看全量代码。红军每到一个新位置，先侦察敌军部署的变化：川军动了没？滇军还在金沙江吗？这不是自己制造的变化，是观察别人造成的变化。</p>
+
+<p>操作纪律：你的迭代速度必须快过你的认知惯性。你花 2 小时验证一个猜测，大脑可能在 10 分钟后就锚定了——后面 110 分钟都在找证据支持它，不是找信息推翻它。你已经进了认知包围圈。可执行规则：一个实验超过 15 分钟还没结果，换一个更小的实验先做。四渡赤水不打薛岳的中央军（代价太高），打黔军（代价低，信息收益大）。</p>
+
+<p>bug 看不懂的时候，不要硬看。先动。你卡住，不是因为不够聪明，是因为只有一个画面——只能在画面里脑补因果。「可能是时序问题」「可能是配置没设对」——这些不是分析，是猜。</p>
+
+<p>动一下：改个参数、关个模块、加个 delay、回退一个版本。bug 行为变了，你就有了两个画面。两个画面之间的差异，就是线索；差异越大，线索越清晰。</p>
+
+<p>三渡佯攻鲁班场，真实目的不是占领，是让蒋介石做一个确定性反应——向西调兵。他一动，信息就出来了。调试里同理：你怀疑模块 A，不要去「找证据证明 A 有问题」——那等于硬打鲁班场。构造一个只测模块 A 的最小 test case。跑过了，A 大概率没问题；没跑过，就深入。目的不是证明 A 有问题，是让 bug 暴露它和 A 的关系。</p>
+
+<p>这不是排除法，是制造信息。你不从固定列表里勾选答案，而是通过每次实验制造新数据，从新数据里看到原来列表里根本没有的答案。三条规则卡死实验质量：覆盖面必须够宽；假设必须有区分力；做完之后剩余假设空间必须显著缩小。</p>
+
+<p>置信度排序怎么用？先验证置信度最低的那个候选。排除不掉——最低的反而命中了——说明预测假设有问题，重新审视所有候选。排除了，继续下一个。不是每一步都知道终点，是每一步都在制造新信息，从新信息里校准下一步方向。</p>
+
+<hr>
+
+<h2>第五层 · 回滚：攻击 bug 的生存条件</h2>
+
+<p>打贵阳的目的是让守住金沙江的人离开金沙江。真打代价大；威胁贵阳，蒋介石调滇军回来护驾，金沙江就空了。</p>
+
+<p>每个 bug 存在需要一组条件同时满足。你不需要同时修复所有条件，只需找到其中一个，改变它。Bug 行为变了，你就知道这个条件是关键支撑；Bug 消失了，你甚至不必先知道根因精确位置，也能暂时绕过，继续推进其他问题。</p>
+
+<p>回滚就是这个逻辑的工程实现——不逐帧分析为什么失败，直接问：哪个 commit 引入后，bug 的条件被满足了？定位到 commit → 看 diff → 条件暴露 → 修那个条件。分析时间 34 秒，传统二分搜索 1968 秒。</p>
+
+<p>四类必要条件可以分开打：时间条件（race window）、空间条件（变量状态）、历史条件（引入 commit）、配置条件（宏 / define）。最深一层是隐藏通路：bug A 和 bug B 看起来独立，若共享模块、时钟域或维护者，修了 A 的某个条件，B 可能自动消失。跨 failure 的条件共享分析，仍是工具可以演进的方向。</p>
+
+<hr>
+
+<h2>第六层 · 人类直觉与经验回流：降维，然后校准下一步</h2>
+
+<p>毛泽东面对 40 万敌军，不看每个点上的兵力数字。他画一条线：川军、滇军、黔军、中央军各自「保地盘」的利益边界在哪里？利益边界一画出来，40 万就降维成 4 股力量。</p>
+
+<p>调试同理：几万行 regression log → 3–5 个 failure signature（并案）；几十个 commit 的 diff → 哪个模块的哪些信号变了（比差）；几百个 test 的 pass/fail → 哪个 group 全灭 vs 哪个零星失败。</p>
+
+<strong>降维的维度决定了你的起点。</strong> 按 test name 降维，一开始就看错了；按 log 行为模式降维，看到的是 bug 自己的结构。工具加速降维，维度对不对靠人的经验——工具做聚类，人做判断。这就是「人类直觉」。
+
+<p>经验回流更短：猜测 → 实验 → 结果 → 修正猜测 → 下一轮实验。四渡赤水的四步不是计划好的路线图，是每一步利用上一步的信息校准下一步。回滚 35 秒 vs 二分 1968 秒的差距也在这里：二分机械对半分，不用反馈加速；用历史 regression 给 commit 打分——越像「曾经引入过 failure」的 commit，越优先验证。</p>
+
+<hr>
+
+<h2>第七层 · 工厂：八段闭环，让出错回流预防</h2>
+
+<p>六法是决策层。工厂层要把 FAIL 之后的动作收成可度量流水线。</p>
+
+<p>r2-debug：r2-xpattern、r2-xfail、r2-xindex、r2-triage、r2-xwave、r2-xtrace、r2-fix、r2-xsign。</p>
+
+<p>一句话：验证 / Debug 负反馈闭环工厂——对出错模式做 预防 → 检测 → 分诊 → 定位 → 根因 → 修复 → 签核 → 沉淀 八段流水线；证据结构化、模式可复用、闭环可度量。</p>
+
+<p>控制论更短：</p>
+
+<p>出错 → 证据链(JSON) → 根因假设 → 修复 → 签核 → 模式入库 → 下轮预防增强（负反馈）</p>
+
+<p>上游少出 bug，靠 verismart / cov / tdd；r2-debug 只管 FAIL 后与反模式回灌。</p>
+
+<table><tr><td>阶段</td><td>子 skill</td><td>输入 → 输出</td><td>职责边界</td></tr></table>
+
+<table><tr><td>① 预防</td><td>r2-xpattern</td><td>历史 debug 案例 → 出错模式库 / 规则 / Linter</td><td>反模式回灌；与 learn、specx lint 共享资产</td></tr></table>
+<table><tr><td>② 检测</td><td>r2-xfail + r2-xindex.stats</td><td>编译 / 仿真 log → 结构化 FAIL 事件</td><td>xfail=前置失败；xindex=UVM log 压缩 + loc_id</td></tr></table>
+<table><tr><td>③ 分诊</td><td>r2-triage</td><td>N 个 FAIL → 优先级 / 聚类 / 归属</td><td>N>1 才启用；1000 回归先看哪个；不做根因</td></tr></table>
+<table><tr><td>④ 定位</td><td>r2-xindex.resolve + r2-xwave</td><td>loc_id / @time → 源码锚点 + 时间窗</td><td>哪一行 / checker + 何时 / 何值</td></tr></table>
+<table><tr><td>⑤ 根因</td><td>r2-xtrace ⇄ r2-xwave</td><td>daidir / FSDB → 因果链 + 假设验证</td><td>观察 → 假设 → 验证 → 精化</td></tr></table>
+<table><tr><td>⑥ 修复</td><td>r2-fix</td><td>根因报告 → 修复建议 / patch 草案</td><td>大块 RTL 重构归 designsmart；fix 出可审计草案</td></tr></table>
+<table><tr><td>⑦ 签核</td><td>r2-xsign</td><td>修复后 → 重跑 + 对比 spec / 断言</td><td>对比 specx 契约；确认不回归</td></tr></table>
+<table><tr><td>⑧ 沉淀</td><td>r2-xpattern</td><td>已签核案例 → 模式入库</td><td>闭合负反馈；提升①预防</td></tr></table>
+
+<p>单次 FAIL：</p>
+
+<p>r2-xfail? → r2-xindex(stats) → r2-xindex(resolve) + r2-xwave → (r2-xwave ⇄ r2-xtrace)* → r2-fix → r2-xsign → r2-xpattern(入库)</p>
+
+<p>回归 FAIL（N>1）：</p>
+
+<p>批量 xindex → triage(选 Top-1) → 走单次路径</p>
+
+<p>三权分立：xindex / xwave / xtrace = 司法（确定性 CLI）；xtrace 编排 + xfix = 行政（AI 推理）；人 + xsign = 立法（签核）。裁判和选手不能是同一个模型会话。</p>
+
+<p>边界钉死：不做 Spec 提取，不做 UVM 工厂，不做综合 log，不做 PR 物理 debug。负反馈稳态靠 specx SSOT、tdd 棘轮、r2-debug 八段闭环——偏差 → 纠偏 → 沉淀 → 预防。</p>
+
+<hr>
+
+<h2>第八层 · 工具：给 Agent 用的调试基础设施</h2>
+
+<p>r2-debug 已覆盖完整调试闭环。</p>
+
+<strong>证据层</strong> — 波形查询、驱动追踪、源码定位、日志结构化。
+
+<strong>编排层</strong> — 分诊、假设推理、修复辅助、签核自动化。
+
+<strong>沉淀层</strong> — 知识沉淀闭环，调试经验回流到下一轮预防。
+
+<strong>扩展层</strong> — UVM Transaction 解析、Coverage Debug、Checkpoint/Restore、Power Aware Debug、Formal 集成、MCP 开放协议层。
+
+<p>r2-debug 不是替代 Verdi 的工具。它是给 AI Agent 用的调试基础设施。工具做聚类，人做判断。</p>
+
+<hr>
+
+<h2>收束</h2>
+
+<p>四渡赤水只教一件事：每一步都在制造信息，好让下一步更准。</p>
+
+<p>六法把这件事落成可操作的决策：并案选缝，比差看变，以动制静造画面差，回滚打生存条件，人类直觉降维，经验回流校准。</p>
+
+<p>八段把修好的案例收进模式库，闭合负反馈——出错回流预防，而不是修完即忘。</p>
+
+<p>兵法决定第一刀砍哪；工厂保证这一刀的证据、签核和沉淀还在。两者缺一，要么会选不会收，要么会跑流水线却不会打仗。</p>
+
+</body>
+</html>

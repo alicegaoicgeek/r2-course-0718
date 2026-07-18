@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>06 · r2-eda：20 类定制EDA及cli，为智能引擎提供确定底座</title>
+<style>:root{--bg:#1a1a1a;--card:#252525;--text:#e0e0e0;--accent:#ffb347;--muted:#999;--green:#7ecf8a;--blue:#6db3f2;--red:#f27d6d;--purple:#c5a3ff;--border:#3a3a3a}*{margin:0;padding:0;box-sizing:border-box}body{background:var(--bg);color:var(--text);font-family:"PingFang SC","Noto Sans SC",sans-serif;line-height:2.1;font-size:20px;max-width:780px;margin:0 auto;padding:32px 24px 80px;letter-spacing:.04em;word-spacing:.1em}h1{font-size:34px;line-height:1.45;margin-bottom:12px;color:#fff;font-weight:700}.subtitle{color:var(--muted);font-size:18px;margin-bottom:10px}.hook{color:var(--accent);font-size:22px;font-weight:600;margin-bottom:36px;padding:14px 18px;border-left:4px solid var(--accent);background:#2a2a2a;border-radius:0 8px 8px 0}hr{border:none;border-top:1px solid var(--border);margin:36px 0}h2{font-size:26px;color:#fff;margin:36px 0 14px;padding-bottom:6px;border-bottom:2px solid var(--border)}h3{font-size:22px;color:#fff;margin:24px 0 10px}h4{font-size:20px;color:var(--accent);margin:20px 0 8px}p{margin-bottom:14px}ul,ol{margin:10px 0 20px 24px}li{margin-bottom:8px}blockquote{background:#2a2a2a;border-left:4px solid var(--accent);padding:14px 18px;margin:16px 0;border-radius:0 8px 8px 0;color:var(--accent);font-weight:600}code{background:#333;color:var(--accent);padding:2px 8px;border-radius:4px;font-size:18px}pre{background:#111;padding:16px;border-radius:8px;overflow-x:auto;margin:16px 0;font-size:16px;line-height:1.6}pre code{background:none;color:var(--green);padding:0}table{width:100%;border-collapse:collapse;margin:16px 0;font-size:18px}th{background:#333;color:#fff;padding:10px 12px;text-align:left;font-weight:700}td{padding:10px 12px;border-bottom:1px solid var(--border)}.key-line{background:#2a2a2a;border-left:4px solid var(--accent);padding:14px 18px;margin:16px 0;font-size:21px;font-weight:600;color:#fff;border-radius:0 8px 8px 0}.tag{display:inline-block;background:#333;color:var(--muted);font-size:14px;padding:2px 8px;border-radius:4px;margin-right:6px}strong{color:#fff}em{color:var(--accent);font-style:normal}</style>
+</head>
+<body>
+<div class="tag" style="background:#534AB7;color:#fff;font-size:16px;padding:4px 14px">P1 R2-AIOS · 06</div>
+<h1>r2-eda：20 类定制EDA及cli，为智能引擎提供确定底座</h1>
+<hr>
+
+
+
+
+<p>寄存器读回挂了：仿真里 <code>CTRL.ENABLE</code> 是 1，软件头文件写在 bit[0]，UVM RAL 写在 bit[1]。三份各说各话——地址冲突类 bug，迁移到单一配置源之前，每个季度都能摊上两三个。</p>
+
+<p>Agent 接到失败，没有确定性工具约束。LLM 不碰规格源，直接打开三个产物分别「对齐」：改 RTL 位域、改 C header、改 RAL。本地 case 全绿，Formal 也没意见。问题是产品规格文档里 ENABLE 仍在 bit[0]；驱动按文档写，集成时三套地址语义对不上——季度级冲突又回来了，只是这次穿着「AI 修好了」的皮。</p>
+
+<p>这不是 AI 不会写代码。是系统没有把「只能改一份真理源、其余由工具生成」立住。<strong>AI 的能力越强，修改半径越大，触碰的边界越多——没有工具底座，能力本身就是风险。</strong></p>
+
+<hr>
+
+<h2>工具还是给人用的，AI 只能干等</h2>
+
+<p>你大概率已经买了 AI，团队里也推了半年。模型更强了，单个工程师写 RTL 更快了。但有一个问题，很少有人愿意正面回答：</p>
+
+<strong>交付周期变短了吗？</strong>
+
+<p>到现场看，画面是这样的：AI 跑完一步，停下来等人审批。人刚进入心流，被审批请求打断。一整个下午，AI 实际工作不到 10 分钟，其余时间在等人。</p>
+
+<p>为什么？<strong>因为 EDA 工具还是给人用的。</strong></p>
+
+<p>人用仿真器：打开 GUI，配参数，点 Run，盯波形。人用 Verdi 追信号：点 10 多次，一层层展开。人对比通过和失败：肉眼扫，手动标差异。人判断嫌疑：脑里综合推理，排优先级。</p>
+
+<p>这些工具的交互方式——GUI、拖拽、点击、肉眼——全是给人设计的。AI 用不了。AI 要的是：一条命令，拿结构化结果，毫秒级决策下一步。</p>
+
+<strong>工具不给人用了，给 AI 用。</strong> 这就是 r2-eda。极大丰富 · 极度垂直 · 极限低成本。确定性 syscall，覆盖 Spec → RTL → 验证 → 调试。
+
+<p>一个芯片团队的 AI 落地 = Agent + Skills + Data + EDA。r2-eda 就是这公式里的 EDA。</p>
+
+<hr>
+
+<h2>在 1314520 里，r2-eda 是什么</h2>
+
+<p>1314520 用法术势三根柱子搭起整个操作系统。r2-eda 属于「术」——真有手段落到地上。</p>
+
+<blockquote>术（MEANS）：20 类 EDA · 11 类垂域 Skill · 各产线工具会干活，而不是墙上制度。</blockquote>
+
+<p>法是规矩（谁能改什么、何时该停、什么叫对错），势是指挥（四角色、五主线、人签核）。术是中间那层——有法有势，没有手段，制度落不了地。r2-eda 就是这个手段。</p>
+
+<p>在七项统一工程里，r2-eda 是「20」——统一度量衡。确定性工具裁判，全绿才停，写 RTL 的不能同时当唯一裁判。工具不立法，工具只执行；规则来自中枢，不来自工具。</p>
+
+<hr>
+
+<h2>20 个工具，两件事</h2>
+
+<p>r2-eda 做两件事：<strong>用 AI 造工具</strong>，和<strong>让 AI 用工具</strong>。</p>
+
+<h3>用 AI 造工具——设计自动化的定制</h3>
+
+<p>Spec 变成数据，数据变成设计，设计变成验证环境。这条链上，凡是能确定的，整个移出概率世界。</p>
+
+<p>寄存器生成最容易手抄出错——地址对不齐、位域写错、文档和 RTL 版本不同步。<code>reggen</code> 一份 regmap.json 进去，RTL + C Header + UVM RAL + SVA 四个产物同源出来。<code>c2rtl</code> 拿 C 算法模型，分钟级试架构、摸 PPA。<code>cbbrtl</code> 在流片验证过的 CBB 上，AI 只补有界残差，FEC 等价兜底才入库——不从零造轮。</p>
+
+<code>ipgen</code> 渲染 IP 模板，<code>topgen</code> 连 SoC 顶层，<code>buildsoc</code> 管 IP 供应链像 pip install 管包。<code>uvmgen</code> 从 yaml 生成完整 UVM 环境，<code>ralgen</code> 生成寄存器抽象层，<code>PSSGen</code> 从 .pss 生成测试代码，<code>vipgen</code> 从协议 spec 生成 VIP。
+
+<p>10 个工具，输入结构化数据，产出设计工件。零幻觉，可编译，确定性生成。</p>
+
+<h3>让 AI 用工具——数据加工和上下文服务</h3>
+
+<p>工具跑完，结果回来了。如果是裸 log——10000 行 UVM 文本混在一起——AI 要从里面猜"这个测试过了没""哪里错了"。效率低，还猜错。</p>
+
+<p>r2-eda 的第二类工具，把 EDA 引擎的输出加工成 AI 能直接用的结构化上下文：</p>
+
+<ul><li><code>r2-scan</code>：3000 条失败日志，人 grep 4-6 小时 → AI 30 秒</li></ul>
+
+<ul><li><code>r2-trace</code>：人在 Verdi 点 10+ 次 → AI 1 条命令拿因果链</li></ul>
+
+<ul><li><code>r2-wave</code>：人开 GUI 拖信号 → AI 1 条命令拿波形数据</li></ul>
+
+<ul><li><code>r2-diff</code>：人手动对比通过和失败 → AI 自动定位差异</li></ul>
+
+<ul><li><code>r2-suspect</code>：人脑综合判断 → AI 自动排名候选</li></ul>
+
+
+<p>加上 <code>r2-label</code> 标注 IP 和数据资产的元数据，<code>r2-cbb</code> 管理 CBB 生命周期——让 AI 能找到、能理解、能复用已有的设计资产。</p>
+
+<p>7 个工具，让数据容易被智能体使用。</p>
+
+<hr>
+
+<h2>AI 用 EDA，跟人有三大根本区别</h2>
+
+<strong>第一，榫卯结构。</strong> 人用工具是串行手动，一个一个调。AI 把智能组件和自动组件像榫卯一样拼成复杂但稳定的工作流，调用频率比人高 1000 倍。不是"AI 调用工具"——是同一个神经回路的呼吸。LLM 是中枢神经，CLI 是外周神经，两者回路内一体，不可分割。
+
+<strong>第二，极限并行化。</strong> 人脑是 CPU——串行，一天有效专注 4 小时。AI 是 GPU——在预算范围内可以拉起成千上万个智能体并行。人用工具时 AI 在空转，这不是 AI 的问题，是工具没给 AI 准备好接口。
+
+<strong>第三，AI 现场给自己造工具。</strong> 人用固定工具集，等供应商给。AI 从相似案例和成功失败路径中快速打磨出可用脚本。<code>cbbrtl</code> 就是实例——CBB 库匹配 + AI 补残差 + FEC 等价兜底。左脚踩右脚，快速提升自身能力。
+
+<p>人倾向用固定的脚本、固定的流水线、不要变化。AI 可以突破这个局限。</p>
+
+<hr>
+
+<h2>双引擎：左脚确定性，右脚创造力</h2>
+
+<p>工具产出分两条路径，构成双引擎：</p>
+
+<strong>左引擎（脚本）</strong>——确定性生成。Hjson → UVM 骨架，零幻觉，可编译。能确定的部分，整个移出概率世界。
+
+<strong>右引擎（AI）</strong>——生成式注入。VPlan → 业务逻辑，补全算法和 Sequence，智能代码推理。需要创造的部分，由 AI 生成。
+
+<p>左引擎造榫——有确定形状的骨架。右引擎填卯——弹性注入业务逻辑。两者咬合成完整的产物。</p>
+
+<hr>
+
+<h2>工具跑完，数据留下了什么</h2>
+
+<p>工具不是跑完就完了。每一次调用都产生数据，数据沉淀成资产。</p>
+
+<strong>Data 有三类：</strong>
+
+<ul><li><strong>IP 生命周期数据</strong>——IP 从设计到验证到集成到交付的全过程数据</li></ul>
+
+<ul><li><strong>EDA 过程数据</strong>——仿真、形式验证、覆盖率等引擎运行产生的数据</li></ul>
+
+<ul><li><strong>智能体过程数据</strong>——智能体调用工具的意图、决策、执行、反馈记录</li></ul>
+
+
+<strong>芯片设计团队有三类资产：</strong>
+
+<strong>硬资产——IP 资产。</strong> 小 IP → 硬 IP → 子系统 → 软 IP → 可配置 IP → 平台级复用。<code>ipgen → topgen → buildsoc</code> 这条链管理 IP 资产的全生命周期。
+
+<strong>软资产——经验资产。</strong> 智能体 = skill + cli + 出 loop 的标准。EDA 是智能体的工具，智能体生态的有机组成部分。<code>r2-label</code> 给资产打标注，<code>r2-cbb</code> 管 CBB 生命周期——让智能体能找到、能理解、能复用。
+
+<p>工具产出的是设计和验证工件。工具沉淀的是数据和经验。前者买得到，后者买不到。</p>
+
+<hr>
+
+<h2>工具是管道，不是裁判</h2>
+
+<p>r2-eda 有一个铁律：<strong>工具不替代引擎，工具调用引擎。</strong></p>
+
+<p>仿真器、形式验证器、lint 工具——这些引擎已有 20 年积累。r2-eda 不重造它们。r2-eda 做的是给已有引擎加一层 CLI/MCP 接口，让智能体能调用。引擎是采购的，接口是自己做的。</p>
+
+<p>更深一层：<strong>工具是管道，可换后端。</strong> 规则不来自工具——先定 Vicky 如何判 PASS，再定调用哪些工具。工具只管执行，不管立法。换了后端引擎，管道不变，规则不变，智能体的工作流不变。</p>
+
+<p>这意味着：你不会被任何一个 EDA 供应商锁死。引擎可以换，接口不动，智能体照跑。</p>
+
+<hr>
+
+<h2>护城河不在快，在慢和脏</h2>
+
+<p>15 个工具，AI 用它们比人快 1000 倍。但快和干净，不是护城河。</p>
+
+<p>"供应商提供一半能力——工具层可以采购。"一个智能体跑得快，换一个也能跑这么快。工具本身买得到。</p>
+
+<strong>护城河在慢和脏。</strong>
+
+<p>慢——不是代码跑得慢，是方向校准慢。每一次看到成品才发现想错了，每一次改了 Spec 再重做，每一次把新的理解重新注入系统。</p>
+
+<p>脏——不是代码写得脏，是经验积累的过程脏。每一次踩坑，补一条规则；每一次失败，留一条决策路径。不断犯错，一点点攒下来。</p>
+
+<p>张三修一个 bug 花 4 小时，试了 5 条错路。这些错路和最终成功路径全部被记录、蒸馏成 Skill v1。李四遇到同类问题，20 分钟解决——因为 Memory 里有张三的经验。三个月，200 次 CI loop，Skill 库从 3 个长到 47 个，准确率从 61% 到 92%。</p>
+
+<strong>"这个能力是无法通过采购来达成的，或者至少一半一半，供应商一半，团队自己做好另一半。"</strong>
+
+<p>对手买同样的模型，起点一样。你每交付一颗芯片，踩过的坑攒成经验库，起点就往前挪一次。他抄得走一个工具，抄不走一个从 200 次失败中长出来的经验库。</p>
+
+<hr>
+
+<h2>百万美金花在哪</h2>
+
+<p>不是花在买更强的模型——模型人人都能买，每月在贬值。</p>
+
+<p>花在买一层让模型敢签流片的工具底座：</p>
+
+<ul><li><strong>产生率降下来</strong>——10 个设计自动化工具，能确定的不交给概率，Spec 不一致在结构上不可能</li></ul>
+
+<ul><li><strong>逃逸率压到零</strong>——工具返回结构化上下文，不是裸 log；机械裁判全绿才停，写 RTL 的不能同时当唯一裁判</li></ul>
+
+<ul><li><strong>爆炸半径控住</strong>——工具是管道可换后端，改一处只坏一处，不触发全片回归</li></ul>
+
+
+<p>一次流片失败的成本是 500 万到 2000 万美金。r2-eda 把流片失败概率从"人肉 review 漏率"压到"机械裁判零逃逸"。<strong>避免一次流片失败，回本 5 到 20 倍。</strong></p>
+
+<p>而经验库的复利——第 N+1 颗芯片的起点是第 N 颗的终点——这个价值不在第一次交付，在后面每一次。</p>
+
+<hr>
+
+<h2>让 AI 执行，让机器裁判，让人校准</h2>
+
+<p>快的那层 AI 做。15 个工具，毫秒级调用，1000 倍于人。</p>
+
+<p>裁判标准从踩坑中沉淀进系统，机器自动跑，全绿才停。</p>
+
+<p>人把每一次犯错攒成智能体的下一次起点。每一次校准方向，每一次补一条规则，每一次留一条决策路径。</p>
+
+<strong>这就是护城河。这就是百万美金花的地方。</strong>
+</body>
+</html>

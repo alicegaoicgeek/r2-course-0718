@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>16 · r2-soc-integration：可定制的SOC开放集成平台</title>
+<style>:root{--bg:#1a1a1a;--card:#252525;--text:#e0e0e0;--accent:#ffb347;--muted:#999;--green:#7ecf8a;--blue:#6db3f2;--red:#f27d6d;--purple:#c5a3ff;--border:#3a3a3a}*{margin:0;padding:0;box-sizing:border-box}body{background:var(--bg);color:var(--text);font-family:"PingFang SC","Noto Sans SC",sans-serif;line-height:2.1;font-size:20px;max-width:780px;margin:0 auto;padding:32px 24px 80px;letter-spacing:.04em;word-spacing:.1em}h1{font-size:34px;line-height:1.45;margin-bottom:12px;color:#fff;font-weight:700}.subtitle{color:var(--muted);font-size:18px;margin-bottom:10px}.hook{color:var(--accent);font-size:22px;font-weight:600;margin-bottom:36px;padding:14px 18px;border-left:4px solid var(--accent);background:#2a2a2a;border-radius:0 8px 8px 0}hr{border:none;border-top:1px solid var(--border);margin:36px 0}h2{font-size:26px;color:#fff;margin:36px 0 14px;padding-bottom:6px;border-bottom:2px solid var(--border)}h3{font-size:22px;color:#fff;margin:24px 0 10px}h4{font-size:20px;color:var(--accent);margin:20px 0 8px}p{margin-bottom:14px}ul,ol{margin:10px 0 20px 24px}li{margin-bottom:8px}blockquote{background:#2a2a2a;border-left:4px solid var(--accent);padding:14px 18px;margin:16px 0;border-radius:0 8px 8px 0;color:var(--accent);font-weight:600}code{background:#333;color:var(--accent);padding:2px 8px;border-radius:4px;font-size:18px}pre{background:#111;padding:16px;border-radius:8px;overflow-x:auto;margin:16px 0;font-size:16px;line-height:1.6}pre code{background:none;color:var(--green);padding:0}table{width:100%;border-collapse:collapse;margin:16px 0;font-size:18px}th{background:#333;color:#fff;padding:10px 12px;text-align:left;font-weight:700}td{padding:10px 12px;border-bottom:1px solid var(--border)}.key-line{background:#2a2a2a;border-left:4px solid var(--accent);padding:14px 18px;margin:16px 0;font-size:21px;font-weight:600;color:#fff;border-radius:0 8px 8px 0}.tag{display:inline-block;background:#333;color:var(--muted);font-size:14px;padding:2px 8px;border-radius:4px;margin-right:6px}strong{color:#fff}em{color:var(--accent);font-style:normal}</style>
+</head>
+<body>
+<div class="tag" style="background:#185FA5;color:#fff;font-size:16px;padding:4px 14px">P2 R2-Arch · 16</div>
+<h1>r2-soc-integration：可定制的SOC开放集成平台</h1>
+<hr>
+
+
+<h2>八站合同 × 两条理论 × 一套纪律 · 内部培训讲义</h2>
+
+<blockquote>读者：内部团队（开发 / 集成 / 商务·PM） 素材：八 Epic 罗盘（31）· 客户满血路径复盘（41）· 三轴相乘（43） 一句话：这篇文章教你用同一套语言讲清 r2-soc-integration 在卖什么、怎么签收、什么不许说。</blockquote>
+
+<hr>
+
+<h2>一、这个品类到底在卖什么</h2>
+
+<p>先把名字摆正。r2-soc-integration 是品类伞，伞名下挂着一条路线——SoC 集成的开放平替路线。这条路线当前的主刀产品叫 r2_connect：一个命令行（CLI）形态的 Connectivity 工具，没有图形界面，对标的是 Magillem Connectivity 的日常岗位工作流，而不是它的商业全家桶。</p>
+
+<p>品类名「可定制的SOC开放集成平台」里每个字都有重量，不是营销修辞。可定制不是指开关特别多，而是客户能把规则、表、冻结清单、豁免策略放进自己的版本库与流水线；开放不是指什么都能灌，而是失败必须红在组装期、能被审计；集成平台是指它管的是从主仓到发布门这一整段连接旅程，不是一个点选小工具。</p>
+
+<p>客户买完之后的一天长什么样？罗盘开篇有一句验收总句，建议每个人背下来——它能当一把尺子，量出任何一个 Epic 合不合格：</p>
+
+<blockquote>我把仓灌进去 → 脏 IP 打成接口 → 规则把平台连上 → glue 进网表 → 改层级不炸 → 升 IP 看影响 → Diff-Impact-Merge（变更-影响-合并）冲突能停 → 检查过了才能放行。</blockquote>
+
+<p>记住这条旅程，后面八节都是它的展开。也记住一句更冷的纪律，海报页脚写的：<strong>范围凭证 ≠ 开发完成</strong>。这句话在内训里要反复出现，因为它防止我们把「门绿了」念成「产线齐了」。</p>
+
+<h2>二、为什么存在：四痛点与两条理论</h2>
+
+<p>产品不是凭空长出来的，它是对四个现场痛点的正面回答。这四个痛点不是文案，是验收设计输入——每一个痛点都对应后面某个 Epic 必须堵住的口子。</p>
+
+<ul><li><strong>P1 异构难装</strong>：第三方和遗留 IP 接口千奇百怪，不可能假设它们到集成时已经是干净的 BusInterface。回答它的就是 E1/E2——先把脏 IP 收成可连资产。</li></ul>
+
+<ul><li><strong>P2 四份真相</strong>：硬件 top、软件头文件、验证 bench、Wiki 各写各的，真相在漂移。回答它的是 E1 统一设计库 + E3 连接即源码，禁止多份手工 top 当真理。</li></ul>
+
+<ul><li><strong>P3 升级静默丢线</strong>：IP 一升级，线就悄悄没了，等硅后才发现。回答它的是 E6 的影响拍和 E7 的冲突停——不许「合完再看仿真」。</li></ul>
+
+<ul><li><strong>P4 封闭难定制</strong>：黑盒点选流程签不进客户流水线。回答它的是规则/表/CLI 全进 Git，整条旅程可审可改。</li></ul>
+
+
+<p>围绕这四个痛点，产品理论只保留两条主线，服务后面所有站。</p>
+
+<p>第一条是 <strong>Capture → Check → Generate</strong>（捕获 → 检查 → 生成）：先让主仓、接口、规则、设计库成为同一真相源；再在组装期把未映射、双驱、冲突、地址重叠全部变红；最后才是真生成物进网表。仿真和细化是 Check/Generate 之后的回证手段，不是主语——这一句很重要，否则产品会被讲成仿真加速器。</p>
+
+<p>第二条是 <strong>变更 → 影响 → 合并</strong>（Diff-Impact-Merge）。这是麦哲伦类平台相对软件 Git 的关键分叉，也是内训里最容易讲错的地方。三拍分别问：改了什么、波及谁必须红什么、两路变更怎么合。一定要钉死一句：<strong>影响 ≠ 合并</strong>。E6 是「一个变更在树上炸开」，E7 是「两个人同时改怎么合」——把 E7 讲成「对 top.v 做 git merge」，就是对理论不准确，因为 Git 默认把变更和合并揉在一起，芯片上会静默丢线。</p>
+
+<h2>三、合同就是八个 Epic</h2>
+
+<p>这是全文最重的一节。先讲一个反面教训：如果文章的主叙事是「scoreboard 全 industrial 了、三测 PASSED 了」，客户学到的是内部机判关闭术，而不是他买了什么。所以合同必须长成八个 Epic，而不是长成脚本清单。每个 Epic 都是合同等价章，结构固定：客户要（体感）→ 以便（业务结果）→ 合同格（机判坐标）→ 验收体感 → 边界。</p>
+
+<p>下面是八站速览，合同格是机判坐标（C0–C11），但对外说话只用 Epic 语言，不用坐标。</p>
+
+<table><tr><td>Epic</td><td>客户体感</td><td>合同格</td><td>一句话边界</td></tr></table>
+
+<table><tr><td>E1 主仓入库</td><td>统一设计库，同一真相源</td><td>C3</td><td>约定子集+最小实例数，非任意全仓</td></tr></table>
+<table><tr><td>E2 接口资产化</td><td>脏 IP 打包+命名治理</td><td>C0+C1</td><td>为连接服务，非完整商业 Packaging</td></tr></table>
+<table><tr><td>E3 规则化连线</td><td>连接即源码，可 diff</td><td>C2</td><td>协议以冻结清单为准</td></tr></table>
+<table><tr><td>E4 glue 进网表</td><td>真实例进顶层，非纸面</td><td>C4</td><td>仿真是验收手段非主语</td></tr></table>
+<table><tr><td>E5 层级手术</td><td>改骨架不丢线</td><td>C5</td><td>约定操作集，非任意 hierarchy DSL</td></tr></table>
+<table><tr><td>E6 IP 升级</td><td>变更+影响，未映射必红</td><td>C6</td><td>单路演进，≠E7 两路合并</td></tr></table>
+<table><tr><td>E7 Diff-Impact-Merge</td><td>冲突必停，模型合并</td><td>C7</td><td>禁文本三方 merge 冒充</td></tr></table>
+<table><tr><td>E8 发布门</td><td>检查→交换→地址→回证→签收</td><td>C8–C11</td><td>四扇门不可拆，≠仿真条数</td></tr></table>
+
+<p>八个站里有四个最容易假绿，内训必须单独点名，把它们的负例讲到能背：</p>
+
+<strong>E2 接口资产化</strong>。最容易被聪明毁掉的一站。正则英雄脚本能过今晚演示，过不了明年的人审。硬门是两条同时成立：表驱动打包（方法字段必须是查表语义，禁正则当交付内核），且项目 alias 回归双绿。只生成接口文件却删掉命名回归，不算完成。
+
+<strong>E6 IP 升级</strong>。核心是「未映射必红」。缺了映射表，assemble/check 必须失败且报告可读——静默比报错更贵。有人把分支文本合并当本站，属于范围错误，拒收。这一站只到「变更→影响」，还没做两路合并。
+
+<strong>E7 Diff-Impact-Merge</strong>。验收五条缺一不可：变更列表可审、交叉影响/冲突列表可审、冲突样例必停、策略合并通过、合并后可细化。合并对象是设计模型，不是生成网表行。软件同学本能把变更和合并揉在一次 Git 合并里，芯片上会静默丢线——这是麦哲伦对照材料反复强调的分叉。
+
+<strong>E8 发布门</strong>。四扇门不可拆散冒充整门：DRC/waiver 可审计、IP-XACT 往返关键字段不丢、mmap 重叠或与连接不一致必红、功能回证（约定仿真当次绿 + 归因 r2 生成物 + 签收包）。三条官方测例通过，只应挂在第四扇「功能回证」下，关不掉前七站，也买不来完整商业等价。
+
+<p>发布按 Epic 横切，不按内部阶段名：R1=E1+E2+E3（能正经开始连平台）→ R2=+E4+E8 部分（网表真、检查开始咬人）→ R3=+E5+E6+E7（像平台组日常改 SoC）→ R4=E8 全量（可签字放行）。一刀未完不要开下一刀，第一刀没完成就去讨论官方十条仿真，是最常见的焦虑跳步。</p>
+
+<h2>四、开放可定制：不是开关多，是规则能进 Git</h2>
+
+<p>「可定制的SOC开放集成平台」这句品类名，内训里要拆开讲，否则会被理解成「配置项很多」。</p>
+
+<p>可定制的可靠定义是：客户能把规则、表、冻结清单、豁免策略放进自己的版本库与流水线，而不是锁死在某个界面点选路径里。所以规则源码化、表可评审、豁免可审计，比再做一个配置向导更接近品类承诺。设计配置项时问两个问题——这个配置是否进入客户可审文件？失败时能否红在组装期？两个都否，多半只是内部调试旋钮，不配写进可定制故事。</p>
+
+<p>开放的另一面是拒绝虚假开放。任意协议、任意全仓、任意一键，看起来开放，其实是把失败从售前搬到售后。罗盘在入库与连线边界写死「约定子集」和「冻结清单」，不是保守，是工程上唯一可签收的开放。</p>
+
+<p>智能这个词也要钉死。海报原话是「让 AI 执行 · 让机器裁判 · 让人签核」。允许 AI 执行连线，但必须有机器裁判（组装期必红）和人签核（发布门）兜底。缺裁判的 AI 连线，只是更快地制造静默错误——这不是智能化，是风险加速器。</p>
+
+<h2>五、边界与禁止话术</h2>
+
+<p>内训最容易翻车的地方不是讲不清能做什么，而是讲不清不做什么。边界同样是理论的一部分。</p>
+
+<p>合同永久排除项，背一遍：GUI Design Editor（C12）、企业多用户/权限/Design Server（C13）、Arteris 认证、任意 SoC 一键灌入、完整商业 Magillem Packaging/Registers 全矩阵。后两项要单独说：本图只签 Connectivity 主刀，r2-soc-integration 三件套里的 r2_package 和 r2_registers 全量不在八 Epic 图内，需要另签。</p>
+
+<p>对外材料三句禁令，建议贴在每个工位：</p>
+
+<ul><li>不说「完整商业无差别等价」——宣称无差别全量等价不是激进，是欺诈风险。</li></ul>
+
+<ul><li>不说「任意 SoC 一键」——约定子集 + 冻结清单是唯一的可签收开放。</li></ul>
+
+<ul><li>不说「仿真条数 = 满血」——仿真最多服务 E8 第四扇，买不来全书。</li></ul>
+
+
+<p>还有一句页脚纪律要在每次汇报前默念：<strong>范围凭证 ≠ 开发完成</strong>。罗盘只是范围与使用地图，不宣布开发完成。客户介绍材料若同时出现 scoreboard 全绿和这句纪律，使用者应以后者为准解释进度。</p>
+
+<h2>六、纪律：先红后绿 + 从第一天编排</h2>
+
+<p>这一节是给开发者的，但商务/PM 也要听懂，因为它是判断「这个站到底做没做」的尺子。</p>
+
+<p>方法轴的权威是 ATDD（验收测试驱动），铁律一句话：<strong>没有会失败的验收，就没有合格的实现</strong>。顺序必须是五步——先写/锁定会失败的验收，看见它因缺能力而红（不是 typo 红），再写最小实现到绿，重构保持绿，宣称完成前重跑同一验收拿到新鲜证据。把「我先把功能堆完再补门禁」叫 rationalization：tests-after 回答的是「代码做了什么」，tests-first 回答的是「合同要什么」。每个 Epic 都要有一条最小红样例贴在看板，比如 E6 是「缺映射仍 exit 0 → 失败（必须红）」，E7 是「冲突被 silent clobber → 失败」。</p>
+
+<p>编排轴的权威是 omp（会话循环挂交付图）。正确一圈是：读 NEXT 节点 → 只做该节点 WORK → until-fail 观察 → 绿则记证据路径，红则写清根因且仍留在同节点 → 取下一节点。有一条常被忽略的纪律：<strong>红则只修同节点</strong>。until-fail 停在 C4 时，去改 C11 或去抬 C0，是编排债务——正确做法是补 C4 的证据或实现，再 until-fail。</p>
+
+<p>执行轨迹上真实发生过的四个偏差，内训当镜子照，别重交学费：</p>
+
+<ul><li><strong>主语后置</strong>：先追注入和三测，被客户追问「更关心矩阵吗」才扳回八站。标准轨迹第一天就锁体感总句。</li></ul>
+
+<ul><li><strong>omp 后置</strong>：大量旁路脚本自产自销，入口来得晚，后期 until-fail 像在装证据。标准轨迹第一天就是交互会话 + NEXT + until-fail。</li></ul>
+
+<ul><li><strong>抬级粘贴</strong>：scoreboard 可写 industrial，但若无验收红绿故事，机判绿而过程不可教。工业级只能出现在例子已红再绿之后。</li></ul>
+
+<ul><li><strong>语言被坐标替换</strong>：对内 C0–C11 方便机判，对外脱离 E1–E8 客户听不懂买了什么。Epic 是范围凭证语言，C 格是机判映射。</li></ul>
+
+
+<h2>七、两种角色的一天</h2>
+
+<strong>开发者</strong>。任选一个未闭环 Epic，先写一条必定失败的验收，跑出红，再动实现；今日禁止先改产品后补门。编排只通过 omp 取 NEXT，禁止开新的旁路大脚本自己验收自己。完成前重跑该节点验收，贴日志，才许在群里说「E? 可演示」。
+
+<strong>使用者</strong>。不必会写 DAG，但必须按旅程用、不按库名用：E1→E2→…→E8。四条红线：无主仓/无约定仿真权限不许说主验收完成；生成物未进功能路径不许说 E8 回证完成；不找 GUI，规则/表/报告才是界面；汇报只说 Epic 与产物路径，不说完整商业等价。
+
+<p>读「范围凭证」要分三档：<strong>可演示</strong>（有可重复命令 + 产物路径 + 曾红过的验收）、<strong>仅机判</strong>（有 cells/evidence 文件但日常 CLI 无人会跑）、<strong>未开始</strong>（只有设计文档）。签收会只接受第一档。经理问「满血了吗」，正确回答模板是：E1–E3 可演示；E6 unmap 红样例可演示；E7 冲突停仍缺 ATDD 红样例；E8 有官方回证但不能单独代表全书——总体范围已钉，产线未宣称商业全量等价。这比「scoreboard closed=true」更负责任。</p>
+
+<h2>八、收束：可接力才是真交付</h2>
+
+<p>脚本会换，人会变；能留下来的，是八站合同语言、验收加工链和会话循环。客户现场最缺的不是更多特性演示，而是把验收写成先于实现的公共语言。机判关闭可以很快（数小时靠既有产物），组织方法论迁移很慢（几周的习惯斗争）——交付后者，才是真交付。</p>
+
+<p>若你只改内训的一页 PPT，请只放三行：</p>
+
+<ul><li>合同 = E1…E8（变更-影响-合并在 E6/E7）</li></ul>
+
+<ul><li>先红验收，再写实现；omp 从第一天编排</li></ul>
+
+<ul><li>仿真回证 ⊆ E8，≠ 满血全书</li></ul>
+
+
+<p>可定制的SOC开放集成平台不是口号，是客户能审的规则与表，是组装期能红的检查，是变更时能停的冲突，是发布时不能拆的四扇门。把这些做成可接力的操作系统，比堆出一次漂亮演示更接近工业。</p>
+</body>
+</html>

@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>14 · r2-cbbrtl：RTL 从能不能写到敢不敢用，CBB 标注四维映射</title>
+<style>:root{--bg:#1a1a1a;--card:#252525;--text:#e0e0e0;--accent:#ffb347;--muted:#999;--green:#7ecf8a;--blue:#6db3f2;--red:#f27d6d;--purple:#c5a3ff;--border:#3a3a3a}*{margin:0;padding:0;box-sizing:border-box}body{background:var(--bg);color:var(--text);font-family:"PingFang SC","Noto Sans SC",sans-serif;line-height:2.1;font-size:20px;max-width:780px;margin:0 auto;padding:32px 24px 80px;letter-spacing:.04em;word-spacing:.1em}h1{font-size:34px;line-height:1.45;margin-bottom:12px;color:#fff;font-weight:700}.subtitle{color:var(--muted);font-size:18px;margin-bottom:10px}.hook{color:var(--accent);font-size:22px;font-weight:600;margin-bottom:36px;padding:14px 18px;border-left:4px solid var(--accent);background:#2a2a2a;border-radius:0 8px 8px 0}hr{border:none;border-top:1px solid var(--border);margin:36px 0}h2{font-size:26px;color:#fff;margin:36px 0 14px;padding-bottom:6px;border-bottom:2px solid var(--border)}h3{font-size:22px;color:#fff;margin:24px 0 10px}h4{font-size:20px;color:var(--accent);margin:20px 0 8px}p{margin-bottom:14px}ul,ol{margin:10px 0 20px 24px}li{margin-bottom:8px}blockquote{background:#2a2a2a;border-left:4px solid var(--accent);padding:14px 18px;margin:16px 0;border-radius:0 8px 8px 0;color:var(--accent);font-weight:600}code{background:#333;color:var(--accent);padding:2px 8px;border-radius:4px;font-size:18px}pre{background:#111;padding:16px;border-radius:8px;overflow-x:auto;margin:16px 0;font-size:16px;line-height:1.6}pre code{background:none;color:var(--green);padding:0}table{width:100%;border-collapse:collapse;margin:16px 0;font-size:18px}th{background:#333;color:#fff;padding:10px 12px;text-align:left;font-weight:700}td{padding:10px 12px;border-bottom:1px solid var(--border)}.key-line{background:#2a2a2a;border-left:4px solid var(--accent);padding:14px 18px;margin:16px 0;font-size:21px;font-weight:600;color:#fff;border-radius:0 8px 8px 0}.tag{display:inline-block;background:#333;color:var(--muted);font-size:14px;padding:2px 8px;border-radius:4px;margin-right:6px}strong{color:#fff}em{color:var(--accent);font-style:normal}</style>
+</head>
+<body>
+<div class="tag" style="background:#185FA5;color:#fff;font-size:16px;padding:4px 14px">P2 R2-Arch · 14</div>
+<h1>r2-cbbrtl：RTL 从能不能写到敢不敢用，CBB 标注四维映射</h1>
+<hr>
+
+
+<p>芯片容错率极低。所以面对"AI 生成 RTL",真正的问题不是"它能不能写",是"它写的,你敢不敢用"。</p>
+
+<p>或者它写的代码你认为不对但是缺乏让它写对的策略。而写对的根、也是让团队敢自主的底座,是同一样东西——标注。前面我们梳理了topdown 设计的6个路径以及r2-topgen, r2-c2rtl, r2-tdd, r2-specx本文继续讨论一个新的方法，r2-cbbrtl。</p>
+
+<hr>
+
+<p>很多代码 Agent 的失败不是发生在写代码时，而是发生在第一分钟。代码维护助手的第一课不是写补丁，而是看懂仓库。代码 Agent 要先回答一个问题：我现在有没有足够上下文进入修改阶段？如果没有，应该继续读仓库，而不是先动手。</p>
+
+<p>这些问题看起来像"代码能力不行"，其实很多时候是"仓库理解阶段缺失"。研究助手读网页，最多写坏一份报告。代码维护助手写文件，可能直接改变产品行为。代码 Agent 一旦开始修改文件，就会影响真实系统行为。它光是"看起来懂"还不够，还要知道自己读过哪些文件、推断了什么、哪些地方没有把握、改动前该跑什么验证。它只是拿着编辑权限在陌生项目里试手气。</p>
+
+<p>你的 Agent 是"先看懂再动手"，还是"一上来就乱改"？如果 Agent 连"自己读过哪些文件"都说不清楚，你怎么敢让它改代码？你有没有被 Agent 的"看起来修好了"骗到过？Agent 的"热心肠"，是不是正在帮你制造本不存在的风险？你的 Agent 在动文件之前，有没有先问一句"这个工作区现在干净吗"？</p>
+
+<p>最危险的代码 Agent 不是写错代码的那种，而是"没跑测试就说修好了"的那种。Agent 改了一行代码，顺手抹掉了你一整天的工作——而它连道歉都不会说。用户说"修个登录报错"，Agent 理解成"顺便重构整个 auth 模块"。</p>
+
+<p>这样做不是拖延，而是把风险显式化。代码项目不像网页材料，读错一点可能只是结论偏；代码改错了，会制造新的 bug。</p>
+
+<hr>
+
+<p>CBB(Common Building Block,通用模块单元)= 公司内部已流片验证、可反复复用的标准化 IP 模块(UART / DMA / DDR…),带统一接口和完整交付包。</p>
+
+<p>标注 = proven 资产上的四张映射,把结构和专家判断显化成 Agent 可消费的知识底座:</p>
+
+<ul><li>特性映射:需求 ↔ feature point ↔ 代码</li></ul>
+
+<ul><li>设计模式:每块用哪个结构模具(FSM / 握手 / FIFO / CDC…)</li></ul>
+
+<ul><li>架构决策:为什么这么设计 = 不可破坏的约束</li></ul>
+
+<ul><li>验证环境映射:feature point ↔ testbench / golden / scoreboard</li></ul>
+
+
+<p>如何标注是基石:它把原本锁在资深工程师脑子里的判断,变成可复用、可累积、能被 Agent 消费的数据——这,就是"专家判断蒸馏"。标注持续建设、回库越用越厚——锁在资深工程师脑子里的判断,从此对AI可复用、可累积。</p>
+
+<hr>
+
+<p>你不会第一天把所有源码逐行读完，而是先看 README、启动方式、目录命名、测试入口，再围绕任务深入。权限从只读开始。</p>
+
+<p>标准流程：inspect_repo → build_repo_map → identify_task_scope → then_patch_if_needed。三个阶段拆分：阶段1，生成 repo map；阶段2，读取相关模块，定位最小问题；阶段3，提出最小补丁和验证命令。先读元文件和目录结构，生成第一版 repo map，按任务深入相关模块，修改前再补上下文。</p>
+
+<p>确定最小字段集：project_type、languages、frameworks、package_manager、entrypoints、key_modules、test_commands、config_files、risky_areas、open_questions。逐字段填写，每个字段值必须附带 evidence（证据来源）。entrypoints 和 key_modules 用路径 + 角色描述 + 证据三元组表示。risky_areas 标注 auth、db、payment、migration、infra 等高风险目录并附 reason。没找到的信息写入 open_questions，不猜测。每个字段都有可追溯的证据；读 map 的人能直接找到入口文件、测试命令和风险区域，无需再翻一遍仓库。</p>
+
+<p>一张没有证据的 repo map，不过是另一种看起来很专业的"幻觉"。不要只写"测试命令是 npm test"，还要写"来自 package.json scripts.test"。否则 repo map 就会变成另一种摘要，读起来像懂了，实际追不回依据。当 Agent 说"这个模块风险高"时，它能指出是因为哪行代码吗？</p>
+
+<p>判断必须带证据，证据可短但要能让人复查。对每个关键判断，构建 trace 条目：claim（判断结论）、evidence（证据来源，如文件路径、脚本内容、import 关系）、confidence（置信度 high/medium/low）。让用户知道 Agent 不是凭感觉总结。让后续修改阶段能继承上下文。</p>
+
+<p>Agent 读了几百个文件，最后给你的结论是"这是一个 TypeScript 项目"——你花了半小时的 token 费用，换来了 README 第一行就能看到的信息。全面分析还是精准打击？Agent 搞错这个顺序，你的上下文窗口和预算一起爆。</p>
+
+<hr>
+
+<p>任务边界四分类：熟悉项目 / 修 bug / 加功能 / 做 code review。熟悉项目：只生成 repo map，不修改文件。修 bug：先建 repo map，再定位最小相关区域，视情况修改。加功能：先建 repo map，确认需求和影响范围，不直接改。做 code review：读取 diff 和相关上下文，不修改。若信息不足，先列出任务边界，再向用户提最少必要问题。任一项不通过，则不进入修改阶段，先补齐信息。</p>
+
+<p>一个新需求,本质是旧 proven 设计的一个改动。上下文服务提供：</p>
+
+<ul><li>改哪里 → 特性映射,定位到哪个模块、哪几行;</li></ul>
+
+<ul><li>用哪个 CBB → 顺标注里的选型判断和集成陷阱,选对的 CBB,实例化、参数化、或按它的标注小心裁剪——不是抓来就用,是顺标注判断它在新环境里改得安不安全;</li></ul>
+
+<ul><li>不破坏什么 → 架构决策,守住约束;</li></ul>
+
+<ul><li>只重验受影响的部分。</li></ul>
+
+
+<p>没碰的,继承 proven 的对;碰的,只是一小块。真正要新写的小块，才交给 AI。</p>
+
+<hr>
+
+<p>到这一步，结构已经定好、坑位已经留好——AI 要做的不是"创作"，而是在既定结构里填空。而且这个结构并不空：它下面已经躺着大量同模具、同接口写过的 CBB。换句话说，AI 要填的这个空，早有一堆"标准答案"摆在旁边。它不是从零生成，而是照着已经流片验证过的同类实现，依葫芦画瓢、改那点局部差异。</p>
+
+<p>正因为如此，它写得对的概率才高——靠三件事，全程在"写的当下"就锁定：</p>
+
+<ul><li>锚定：把同结构下已经写对的 CBB 放进它眼前，让它贴着现成的对的实现写；</li></ul>
+
+<ul><li>缩小：要填的空本就是结构切出来的小块、标准块，尺度小、形态标准，它才又准又稳；</li></ul>
+
+<ul><li>约束：坑位的接口、设计模式、边界都已由结构钉死，它只能在那一点局部里动。</li></ul>
+
+
+<p>全程不训练、不改模型——靠继承（同结构的 CBB）、上下文（摆在眼前的对的实现）、约束（结构钉死的坑位）。</p>
+
+<hr>
+
+<p>九个检查点：只读启动、项目类型、入口明确、测试命令、模块地图、风险区域、证据 trace、不确定点、修改边界。作业验收五件事：没修改源码、能提取命令、能列主要模块、标注风险和不确定点、能用 trace 解释判断。</p>
+
+<p>不可解释?→ 改了哪、为什么、波及哪些,标注里全程可追溯。不可控?→ 结构和边界你定,你始终掌舵。不敢交付?→ 你靠的是你流片验证过的 CBB、你定的结构、和蒸馏进标注的判断,不是把芯片赌给黑盒。</p>
+
+<p>这不是让你信 AI,是把"敢用"建立在你本来就信的东西上。</p>
+
+<p>AI 生成 RTL 凭什么写得对?因为我们把结构和专家判断蒸馏成了标注;新需求顺标注,变成一个有界、可追的小改动;结构用设计模式和 CBB 搭对,小块靠继承和约束写对。对,在你定的结构、你的 CBB、和蒸馏进标注的判断里。结构是因,复用是果,标注,是把它们沉下来、传得下去、改得动的核心。</p>
+
+<hr>
+
+<h2>思维导图</h2>
+
+<ul><li>r2-cbbrtl：让 Agent 看懂存量 RTL 代码库中的 CBB</li></ul>
+
+<p>    - 核心问题与背景</p>
+
+<p>        - 芯片容错率极低。所以面对"AI 生成 RTL",真正的问题不是"它能不能写",是"它写的,你敢不敢用"</p>
+
+<p>        - 或者它写的代码你认为不对但是缺乏让它写对的策略</p>
+
+<p>        - 而写对的根、也是让团队敢自主的底座,是同一样东西——标注</p>
+
+<p>        - 很多代码 Agent 的失败不是发生在写代码时，而是发生在第一分钟</p>
+
+<p>        - 这些问题看起来像"代码能力不行"，其实很多时候是"仓库理解阶段缺失"</p>
+
+<p>        - 研究助手读网页，最多写坏一份报告。代码维护助手写文件，可能直接改变产品行为</p>
+
+<p>        - 代码 Agent 一旦开始修改文件，就会影响真实系统行为</p>
+
+<p>        - 它只是拿着编辑权限在陌生项目里试手气</p>
+
+<p>        - 这样做不是拖延，而是把风险显式化。代码项目不像网页材料，读错一点可能只是结论偏；代码改错了，会制造新的 bug</p>
+
+<p>    - CBB 与标注</p>
+
+<p>        - CBB(Common Building Block,通用模块单元)= 公司内部已流片验证、可反复复用的标准化 IP 模块(UART / DMA / DDR…),带统一接口和完整交付包</p>
+
+<p>        - 标注 = proven 资产上的四张映射,把结构和专家判断显化成 Agent 可消费的知识底座</p>
+
+<p>            - 特性映射:需求 ↔ feature point ↔ 代码</p>
+
+<p>            - 设计模式:每块用哪个结构模具(FSM / 握手 / FIFO / CDC…)</p>
+
+<p>            - 架构决策:为什么这么设计 = 不可破坏的约束</p>
+
+<p>            - 验证环境映射:feature point ↔ testbench / golden / scoreboard</p>
+
+<p>        - 如何标注是基石:它把原本锁在资深工程师脑子里的判断,变成可复用、可累积、能被 Agent 消费的数据——这,就是"专家判断蒸馏"</p>
+
+<p>        - 标注持续建设、回库越用越厚——锁在资深工程师脑子里的判断,从此对AI可复用、可累积</p>
+
+<p>    - 默认权限与流程设计</p>
+
+<p>        - 权限从只读开始</p>
+
+<p>        - 标准流程：inspect_repo → build_repo_map → identify_task_scope → then_patch_if_needed</p>
+
+<p>        - 三个阶段拆分</p>
+
+<p>            - 阶段1：生成 repo map</p>
+
+<p>            - 阶段2：读取相关模块，定位最小问题</p>
+
+<p>            - 阶段3：提出最小补丁和验证命令</p>
+
+<p>        - 先读元文件和目录结构，生成第一版 repo map，按任务深入相关模块，修改前再补上下文</p>
+
+<p>        - 你不会第一天把所有源码逐行读完，而是先看 README、启动方式、目录命名、测试入口，再围绕任务深入</p>
+
+<p>    - Repo Map 的内容与生成</p>
+
+<p>        - 最小字段集：project_type、languages、frameworks、package_manager、entrypoints、key_modules、test_commands、config_files、risky_areas、open_questions</p>
+
+<p>        - 逐字段填写，每个字段值必须附带 evidence（证据来源）</p>
+
+<p>        - 判断必须带证据，证据可短但要能让人复查</p>
+
+<p>        - 一张没有证据的 repo map，不过是另一种看起来很专业的"幻觉"</p>
+
+<p>        - 不要只写"测试命令是 npm test"，还要写"来自 package.json scripts.test"。否则 repo map 就会变成另一种摘要，读起来像懂了，实际追不回依据</p>
+
+<p>        - 没找到的信息写入 open_questions，不猜测</p>
+
+<p>    - Trace 与任务边界</p>
+
+<p>        - 记录 claim + evidence + confidence</p>
+
+<p>        - 让用户知道 Agent 不是凭感觉总结</p>
+
+<p>        - 让后续修改阶段能继承上下文</p>
+
+<p>        - 不可解释?→ 改了哪、为什么、波及哪些,标注里全程可追溯</p>
+
+<p>        - 四类任务边界</p>
+
+<p>            - 熟悉项目：只生成 repo map，不修改文件</p>
+
+<p>            - 修 bug：先建 repo map，再定位最小相关区域，视情况修改</p>
+
+<p>            - 加功能：先建 repo map，确认需求和影响范围，不直接改</p>
+
+<p>            - 做 code review：读取 diff 和相关上下文，不修改</p>
+
+<p>        - 若信息不足，先列出任务边界，再向用户提最少必要问题</p>
+
+<p>    - 新需求 = delta</p>
+
+<p>        - 一个新需求,本质是旧 proven 设计的一个改动</p>
+
+<p>        - 上下文服务提供</p>
+
+<p>            - 改哪里 → 特性映射,定位到哪个模块、哪几行</p>
+
+<p>            - 用哪个 CBB → 顺标注里的选型判断和集成陷阱,选对的 CBB,实例化、参数化、或按它的标注小心裁剪——不是抓来就用,是顺标注判断它在新环境里改得安不安全</p>
+
+<p>            - 不破坏什么 → 架构决策,守住约束</p>
+
+<p>            - 只重验受影响的部分</p>
+
+<p>        - 没碰的,继承 proven 的对;碰的,只是一小块</p>
+
+<p>        - 真正要新写的小块，才交给 AI</p>
+
+<p>    - 填空：锚定、缩小、约束</p>
+
+<p>        - 到这一步，结构已经定好、坑位已经留好——AI 要做的不是"创作"，而是在既定结构里填空</p>
+
+<p>        - 而且这个结构并不空：它下面已经躺着大量同模具、同接口写过的 CBB</p>
+
+<p>        - AI 要填的这个空，早有一堆"标准答案"摆在旁边。它不是从零生成，而是照着已经流片验证过的同类实现，依葫芦画瓢、改那点局部差异</p>
+
+<p>        - 锚定：把同结构下已经写对的 CBB 放进它眼前，让它贴着现成的对的实现写</p>
+
+<p>        - 缩小：要填的空本就是结构切出来的小块、标准块，尺度小、形态标准，它才又准又稳</p>
+
+<p>        - 约束：坑位的接口、设计模式、边界都已由结构钉死，它只能在那一点局部里动</p>
+
+<p>        - 全程不训练、不改模型——靠继承（同结构的 CBB）、上下文（摆在眼前的对的实现）、约束（结构钉死的坑位）</p>
+
+<p>    - 工程取舍与验收</p>
+
+<p>        - 全面分析还是精准打击？Agent 搞错这个顺序，你的上下文窗口和预算一起爆</p>
+
+<p>        - 用户说"帮我看看项目"可直接生成 repo map</p>
+
+<p>        - 信息不足时先列任务边界，再问最少的问题</p>
+
+<p>        - 九个检查点：只读启动、项目类型、入口明确、测试命令、模块地图、风险区域、证据 trace、不确定点、修改边界</p>
+
+<p>        - 任一项不通过，则不进入修改阶段，先补齐信息</p>
+
+<p>        - 作业验收五件事：没修改源码、能提取命令、能列主要模块、标注风险和不确定点、能用 trace 解释判断</p>
+
+<p>    - 为什么敢用</p>
+
+<p>        - 不可解释?→ 改了哪、为什么、波及哪些,标注里全程可追溯</p>
+
+<p>        - 不可控?→ 结构和边界你定,你始终掌舵</p>
+
+<p>        - 不敢交付?→ 你靠的是你流片验证过的 CBB、你定的结构、和蒸馏进标注的判断,不是把芯片赌给黑盒</p>
+
+<p>        - 这不是让你信 AI,是把"敢用"建立在你本来就信的东西上</p>
+
+<p>    - 北极星</p>
+
+<p>        - AI 生成 RTL 凭什么写得对?因为我们把结构和专家判断蒸馏成了标注;新需求顺标注,变成一个有界、可追的小改动;结构用设计模式和 CBB 搭对,小块靠继承和约束写对</p>
+
+<p>        - 对,在你定的结构、你的 CBB、和蒸馏进标注的判断里</p>
+
+<p>        - 结构是因,复用是果,标注,是把它们沉下来、传得下去、改得动的核心</p>
+</body>
+</html>

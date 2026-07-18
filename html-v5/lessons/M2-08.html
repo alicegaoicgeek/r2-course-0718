@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>08 · 小模型和方法论的黄金时代，附多场景案例</title>
+<style>:root{--bg:#1a1a1a;--card:#252525;--text:#e0e0e0;--accent:#ffb347;--muted:#999;--green:#7ecf8a;--blue:#6db3f2;--red:#f27d6d;--purple:#c5a3ff;--border:#3a3a3a}*{margin:0;padding:0;box-sizing:border-box}body{background:var(--bg);color:var(--text);font-family:"PingFang SC","Noto Sans SC",sans-serif;line-height:2.1;font-size:20px;max-width:780px;margin:0 auto;padding:32px 24px 80px;letter-spacing:.04em;word-spacing:.1em}h1{font-size:34px;line-height:1.45;margin-bottom:12px;color:#fff;font-weight:700}.subtitle{color:var(--muted);font-size:18px;margin-bottom:10px}.hook{color:var(--accent);font-size:22px;font-weight:600;margin-bottom:36px;padding:14px 18px;border-left:4px solid var(--accent);background:#2a2a2a;border-radius:0 8px 8px 0}hr{border:none;border-top:1px solid var(--border);margin:36px 0}h2{font-size:26px;color:#fff;margin:36px 0 14px;padding-bottom:6px;border-bottom:2px solid var(--border)}h3{font-size:22px;color:#fff;margin:24px 0 10px}h4{font-size:20px;color:var(--accent);margin:20px 0 8px}p{margin-bottom:14px}ul,ol{margin:10px 0 20px 24px}li{margin-bottom:8px}blockquote{background:#2a2a2a;border-left:4px solid var(--accent);padding:14px 18px;margin:16px 0;border-radius:0 8px 8px 0;color:var(--accent);font-weight:600}code{background:#333;color:var(--accent);padding:2px 8px;border-radius:4px;font-size:18px}pre{background:#111;padding:16px;border-radius:8px;overflow-x:auto;margin:16px 0;font-size:16px;line-height:1.6}pre code{background:none;color:var(--green);padding:0}table{width:100%;border-collapse:collapse;margin:16px 0;font-size:18px}th{background:#333;color:#fff;padding:10px 12px;text-align:left;font-weight:700}td{padding:10px 12px;border-bottom:1px solid var(--border)}.key-line{background:#2a2a2a;border-left:4px solid var(--accent);padding:14px 18px;margin:16px 0;font-size:21px;font-weight:600;color:#fff;border-radius:0 8px 8px 0}.tag{display:inline-block;background:#333;color:var(--muted);font-size:14px;padding:2px 8px;border-radius:4px;margin-right:6px}strong{color:#fff}em{color:var(--accent);font-style:normal}</style>
+</head>
+<body>
+<div class="tag" style="background:#185FA5;color:#fff;font-size:16px;padding:4px 14px">M2 认知 · 08</div>
+<h1>小模型和方法论的黄金时代，附多场景案例</h1>
+<hr>
+
+
+<blockquote>蒸馏自《Ornith-1.0 方法论与案例集》多源（DeepReinforce AI / Hiro Nakamura / DevOps.com / X 开发者社区），2026 年 7 月</blockquote>
+<blockquote>阅读时间约 25 分钟 | 共 5 个核心方法论</blockquote>
+
+<h2>冷开场</h2>
+
+<p>一个 35B 的小模型在 Terminal-Bench 2.1 上拿了 64.2 分。参数是它 11 倍的 Qwen3.5-397B 拿了 53.5 分。这不是 benchmark 噪声——一个零头参数量的模型，在真实 agentic 编程评测中把参数王者拉下了 10 分。</p>
+
+<p>更离谱的事在后面。同一个 35B，挂上 ChipTDD 这个 skill，从零设计 UART 收发器——212 行 RTL，9/9 测试全过，verilator 零告警。对标的 agentic kimi-2.6，参数大 10 倍，有 harness 但没 TDD，怎么都不过。</p>
+
+<p>差距不在模型。在方法论。</p>
+
+<hr>
+
+<p>过去两年，AI 工程圈的默认剧本是「等更大的模型」。模型不够好？等下一代。Agent 卡住了？换更强的。本地跑不动？上云端 API。这个剧本把工程师的注意力锁定在一个维度上——参数量。但 2026 年夏天，一个叫 Ornith 的开源模型家族和它背后的工程实践，让这个剧本翻页了。</p>
+
+<p>这篇文章要讲清楚五件事：为什么小模型能赢——不是 anecdotal 的「我感觉还行」，而是从训练范式到运行时设计到任务拆解到路由策略的完整方法论链条。读完你会知道，明天上班该把你的 AI coding 工作流改哪里。</p>
+
+<hr>
+
+<h2>为什么 35B 能赢 397B：训练的是搜索，不是答案</h2>
+
+<p>绝大多数人理解模型训练的方式是：给任务，训练模型输出更好的答案。这个理解适用于 GPT 系列，适用于 Llama，适用于你在 HuggingFace 上看到的几乎所有模型。但它恰好不适用于 Ornith 的 self-scaffolding RL。</p>
+
+<p>Hiro Nakamura 的概括一击致命：「Ornith 训练的是脚手架，而不只是答案。」</p>
+
+<p>传统编码智能体里，脚手架（scaffold）是人工写的 prompt 外壳——人类定义「你先读代码，再 trace 调用链，再写修复，再跑测试」。模型只优化最后那一步——代码补丁本身。Ornith 把优化单元改成了「脚手架 + 答案」联合训练。</p>
+
+<p>具体来说，训练分两个阶段。阶段一：给定任务和上一轮脚手架，模型提出精炼后的脚手架——推理序列、调试策略、工具调用顺序、执行计划。阶段二：给定脚手架和任务，模型生成解决方案 rollout。reward 同时回传到两个阶段。</p>
+
+<p>这意味着模型不只在学「写对代码」。它在学「先读测试、先 trace 调用链、先写最小复现」这类搜索策略。这些策略不是人类写进 prompt 的，是模型在 RL 中自己发现的——就像 AlphaGo 学出的某些走法，人类棋手事后才意识到「原来可以这么下」。</p>
+
+<p>这解释了一个关键现象：<strong>为什么参数差距体现为迭代次数差，而非质量差</strong>。</p>
+
+<p>ChipTDD UART 实验中，35B 用了 20 次迭代收敛，旗舰模型用了 3 次。但最终质量相当——9/9 测试全过。差价在探索效率，不在最终答案的能力上限。只要任务有明确的 verifier（外部判断对错的工具），让小模型多跑几轮就能追上大模型的质量——而本地推理的零成本零延迟，让「多跑几轮」几乎没有代价。</p>
+
+<blockquote>Ornith 训练的是脚手架，而不只是答案。</blockquote>
+<blockquote>— Hiro Nakamura</blockquote>
+
+<p>用户 @11_Jeff_11 的实操更直观：他用 35B 处理一整年几万条 Amazon 订单数据，提取所有 3D printing filaments 信息并自动追加到税表。结果「flawlessly worked」——不是模型一次写对了复杂脚本，而是 self-scaffolding 让它自主执行「写代码 → 跑 Pandas → 验证输出 → 修正 → 再跑」的闭环。35B 的优势不在「一次写对」，在「错了能自己修」。</p>
+
+<p>你可能会想：这和传统的 RLHF 有什么本质区别？区别在于训练目标。RLHF 优化的是「输出更符合人类偏好」，self-scaffolding RL 优化的是「如何编排搜索与调试流程」。前者让模型更会说人话，后者让模型更会解决问题。</p>
+
+<strong>你会什么时候用到这个？</strong>
+
+<p>当你纠结 9B 还是 35B，不要问「35B 比 9B 聪明多少」。要问「我的任务 verifier 有多明确」。verifier 越明确，参数差距越可以被迭代次数弥补。Analyzing CI pipeline 预算有限但想替掉云端 API？如果任务有明确的 pass/fail 信号（测试框架、Schema validator、覆盖率阈值），选 7B + 更多迭代。7B 跑 30 轮 test generation → run → check coverage → improve，最终覆盖率和 70B 的 5 轮相当，但本地零成本零延迟。</p>
+
+<p>但要小心——这个逻辑只在 verifier 存在时成立。创意写作、战略分析、开放式对话：参数差距无法被迭代弥补。不要让 9B 跑 50 轮来追求 GPT-4 质量的散文。那是浪费时间。</p>
+
+<hr>
+
+<p>到这里，你理解了第一个支柱：self-scaffolding RL 给了小模型一个「会搜索」的内核。但内核需要在合适的容器里运行。如果容器设计错了，内核再强也出不来。</p>
+
+<h2>你的 Agent 卡住了——问题不是模型不够聪明</h2>
+
+<p>你的 agent 已经在同一个 bug 上转了五分钟。它在两种修复方案之间反复横跳，改完 A 立刻又改回 B。没有新的测试失败信息，但它还在改代码。</p>
+
+<p>你的第一反应是什么？换一个更大的模型？</p>
+
+<p>Hiro Nakamura 的诊断方向完全相反：<strong>模型嵌在 loop 里，loop 又约束模型能表达什么——loop 本身就是模型的能力上限。</strong></p>
+
+<p>大多数人把注意力放在「选哪个模型」上。但 Hiro 指出了一个更根本的问题：编码智能体不是「下一个 token 生成器」。它是一个循环——读文件 → 选命令 → 打补丁 → 跑测试 → 解析错误 → 判断是补丁错还是测试 harness 有问题 → 重复。模型嵌在这个循环里。循环的每一个环节——它能看到什么信息、能调用什么工具、验证结果怎么回传——决定了模型能表达什么。loop 设计就是模型的能力天花板。</p>
+
+<p>这改变了问题的性质。传统思路：任务难 → 换更强的模型。新思路：任务难 → 设计更好的 loop。</p>
+
+<p>DeepSWE 的 114 个真实 coding 任务提供了量化证据：35B Q8_0 通过率 7.9%（优于 Qwen3.6-Plus 约 3%），且几乎不陷入 endless loop。不是因为它更聪明——7.9% 本身不高——而是因为它的 loop coherence 更强：它知道什么时候停下来，什么时候换方向。</p>
+
+<p>当 loop 卡住时，模型反复执行相同操作、在 A/B 方案间切换、无新信息仍在改代码——问题不是模型能力不足，是搜索空间太大。解法是加约束，不是换模型。三招：restraint prompt（明确「只探索方案 A，完整验证后再考虑方案 B」）、缩短 turn 上限（逼模型在有限步数内收敛）、强制退出条件（「超过 N 轮未收敛则输出当前最佳并说明困惑」）。</p>
+
+<p>这与工程师的直觉完全相反——卡住的自然反应是「升级资源」。但大模型在同一个无约束的搜索空间里同样可能振荡。约束的是方向，不是能力。</p>
+
+<p>DevOps Consultant @iamvishnuks 的做法印证了这一点。他用 35B Q4_K_M + 自定义 harness 做生产 incident 排查，评价为「best local LLM」，质量明显优于 Qwen3.6-28b。差异不在模型——35B 和 28B 参数接近——而在 harness 设计的 loop 结构。他的自定义 harness 在 log analysis → alert → fix 的每个环节都设置了显式的验证步骤和置信度阈值：模型读日志后必须先输出「我看到了什么」→ harness 验证日志行号是否对应 → 再进入 fix 阶段。这个「先理解再动手」的 loop 约束，排除了模型跳步诊断的常见失败模式。</p>
+
+<blockquote>编码智能体不是「下一个 token 生成器」，而是一个循环：读文件 → 选命令 → 打补丁 → 跑测试 → 解析错误 → 判断是补丁错还是测试 harness 有问题 → 重复。</blockquote>
+<blockquote>— Hiro Nakamura</blockquote>
+
+<strong>你会什么时候用到这个？</strong>
+
+<p>当你的 agent 在一个任务上跑了超过你预期的轮次还没收敛，不要急着 kill 换模型。先检查 loop 的 evaluate 阶段有没有给模型新的、有意义的信息。如果没有，模型在空转——它在没有新信号的搜索空间里随机游走。需要约束搜索空间，不是更强的算力。</p>
+
+<hr>
+
+<p>loop 设计约束了「怎么跑」。但还有一个前置问题：「跑什么」——任务多大，模型才咬得动？</p>
+
+<h2>把任务切到模型咬得动的尺寸，让判决权永远外置</h2>
+
+<p>让一个 35B 的小模型从零设计 UART 收发器，给定 spec 和验证标准，一圈过。同一个测试例，参数大 10 倍的 agentic kimi-2.6 有 harness 但没 TDD，怎么都不过。</p>
+
+<p>差距不在模型。在 FP 分级和判决权外置。</p>
+
+<p>FP（Feature Point）分级不是常规的「按功能模块拆分」。常规拆分按模块边界——「你先做发送模块，再做接收模块」。FP 分级按<strong>可验证性边界</strong>——「这个 Feature Point 有没有独立的、可自动执行的测试？」</p>
+
+<p>每个 FP 必须满足两个条件：一，独立可验证——有专门为这个 FP 写的测试，跑完能明确判断 pass/fail，不依赖其他 FP 先完成。二，粒度可控——模型能在一个 RED→GREEN 循环内独立完成。如果模型要跑 50 轮才能过一个 FP，说明这个 FP 太大了，继续拆。</p>
+
+<p>ChipTDD UART 实验把整个设计拆为 TC1→TC9，每级有独立可验证的测试。模型逐级闯关：先让 TC1 的测试变红 → 写 RTL 让它变绿 → 重构 → 进入 TC2。每个级别模型都面对一个收敛的搜索空间——它知道当前只做这一件事，pass/fail 是二值的。模型全程自己跑仿真、读真实输出，约 20 次落盘迭代，自主修复了 8 个真 bug——NCO 回绕、RX tick 计数偏一、采样区假匹配、rx_valid 时序等。</p>
+
+<p>更关键的设计是<strong>判决权外置</strong>。模型永远不自己判断「我写的对不对」——外部 Oracle（仿真器、测试框架、verifier）裁定 pass/fail。判分由外部独立复跑完成，模型自述仅作线索。</p>
+
+<p>这在一个信任 AI 输出的文化中是反直觉的。人们天然信任模型输出——「它说可以了，那应该就可以了吧」。但判决权外置切断了一个根本性的回路：当模型自己判断对错时，它的判断和被判断的内容来自同一个参数分布——错误被系统性地看不见。外部 Oracle 不存在这个问题。</p>
+
+<blockquote>FP 分级把任务切到小模型咬得动的尺寸，判决权外置保证结果可信。</blockquote>
+<blockquote>— ChipTDD UART 实验结论</blockquote>
+
+<p>还记得前面讲的 agentic loop 吗？loop 设计约束了「每一步怎么跑」。FP 分级决定「每一步跑多大的问题」。两者配合：一个 CI pipeline 生成器任务可以拆成 FP1（读 repo 结构输出 pipeline 骨架，验证：YAML 格式合法），FP2（注入 build step，验证：docker build 返回 0），FP3（注入 test step，验证：pytest 返回 0）。每个 FP 模型只做一件事，做完立刻被外部工具验证。不是模型自评「我觉得应该可以了」。</p>
+
+<strong>你会什么时候用到这个？</strong>
+
+<p>当你的 agent 在一个中等复杂度的项目上反复失败，你怀疑是任务太大它「吞不下」——不要继续调 prompt。用 FP 分级方法拆开，每个 FP 必须有独立测试。如果拆不出独立测试，说明你对任务的理解还不够细。</p>
+
+<p>但要小心：FP 分级的泛化验证目前只有 ChipTDD UART 一个完整的轨迹记录。在非硬件设计领域的系统化应用还很有限。而且判决权外置的前提是 Oracle 本身可信——如果测试用例写错了，FP 分级会系统性地引导模型向错误的验证标准收敛。UART 实验中 TC4 的 spec 与 Oracle 分歧就是一个警示。</p>
+
+<hr>
+
+<p>现在你手上有三个工具：self-scaffolding 的内核（模型会搜索）、agentic loop 的容器（搜索空间可控）、FP 分级的任务粒度（每个任务 bite-size）。这三个工具不是加法，是乘法。它们汇聚成的工程架构，能让你把 AI coding 账单砍掉 93%——而且这不是退而求其次的省钱，是更优的架构设计。</p>
+
+<h2>路由策略：小模型占 production，大模型占 discovery</h2>
+
+<p>你的 AI coding 账单能不能降 93%？不是靠换更便宜的 API。是靠换思路：把 80% 的调用交给本地 9B 小模型，只在它搞不定时才扔给云端。</p>
+
+<p>关键的认知翻转在这里：路由标准不是「任务难度」，而是 <strong>verifier 是否存在</strong>。</p>
+
+<p>传统的直觉——「难任务用大模型，简单任务用小模型」——在实际工程中无法操作。因为「难」无法精确定义。同样的代码生成，对某些模型难，对另一些简单。但 verifier 的存在与否是二值的：有没有一个外部工具能自动判断模型输出是否正确？</p>
+
+<p>基于这个标准，路由策略变成一个级联：</p>
+
+<ul><li>所有任务默认走小模型（本地 9B 或 35B）</li></ul>
+<ul><li>小模型输出后，verifier 检查（test runner、schema validator、diff checker、linter）</li></ul>
+<ul><li>verifier 失败 → escalate 到更强的模型（35B 或云端）</li></ul>
+<ul><li>仍然失败 → 标记为 discovery 任务，需要人类介入或更大模型单独处理</li></ul>
+
+<p>这个级联的威力来自两层效应。第一层是成本：90%+ 的日常 coding 调用本身就有隐式 verifier——编译器报错、linter 告警、测试失败——verifier 级联自动处理，人类只介入边缘 case。有用户的实际数据：9B 处理「boring 80%」任务（autocomplete、小 bug、daily edits、repo questions），硬核 20% 扔云端，AI coding 账单直接降 93%。</p>
+
+<p>第二层更深刻：区分了 production（高频、有明确 verifier、routine）和 discovery（低频、无自动 verifier、探索性）。大模型用在了它真正该用的地方——探索和判断——而不是消耗在重复执行上。</p>
+
+<blockquote>SLM-default + LLM-fallback：不确定性感知路由 + verifier 级联降本 10-30x。大模型占 discovery，小模型占 production。</blockquote>
+<blockquote>— arXiv《Small Language Models for Agentic Systems》</blockquote>
+
+<p>更深一层，Hiro Nakamura 提出了 scaffold families 的概念：「未来一年，严肃编码 agent 栈会少谈『一个最强模型』，多谈 scaffold families——bug 修复、迁移、仓库探索、失败测试分诊、依赖更新等。」</p>
+
+<p>为什么不同任务需要不同的 scaffold，而不只是不同的模型？因为 bug 修复需要的搜索策略是「先 trace 调用链 → 最小复现 → 定点修复」。仓库探索需要的是「先理解结构 → 找到关键文件 → 逐文件分析」。失败测试分诊需要的是「读测试输出 → 定位失败行 → 判断是测试错还是代码错」。即使使用同一个模型，不同的 scaffold family 也会导致完全不同的效果。</p>
+
+<p>这意味着 agent 系统的核心竞争力不在「用哪个模型」，而在「围绕模型设计了什么样的 optimization layer」——scaffold families 就是这个 layer。参数量是别人可以追上的，scaffold 设计是你独有的工程资产。</p>
+
+<strong>你会什么时候用到这个？</strong>
+
+<p>当你的 AI API 账单在涨，而且大部分调用是重复性任务——不急着砍用量。先做一次分类：有多少调用有可自动化 verifier？把这些切给本地小模型。设计三层层级：9B 做 autocomplete 和单行 patch（verifier：编译），35B 做 multi-step loop（verifier：测试套件），云端做 review 和 planning（verifier：人工确认）。</p>
+
+<hr>
+
+<h2>真实工作流优先：Benchmark 做初筛，不做终判</h2>
+
+<p>一个模型在 HumanEval 上拿了 95%，你该切过去吗？</p>
+
+<p>先别急。Ornith 在少数 bake-off blind test 中被描述为「ordinary」——可能因为 prompt leak、输出 verbose、或过于 cautious 的默认行为。但在 X 开发者社区的真实工作流里，它被反复称为「目前最佳本地 coding 模型之一」「真实 agent 任务中超越 Qwen3.6/3.5」。</p>
+
+<p>benchmark 有三个系统性问题，不是「不完美」，而是「测的东西和你要的东西有结构性错配」。</p>
+
+<strong>评测维度错配</strong>。HumanEval 是单轮函数补全，MBPP 是单轮代码生成。但真实的 agentic coding 是多轮 plan → execute → evaluate → improve 的循环。一个模型可能单轮输出很漂亮，但在 agentic loop 中 coherence 崩溃——每轮输出和上一轮对不上、忘记刚才做了什么、在无关方向上游走。benchmark 测不到这个。
+
+<strong>分布匹配偏差</strong>。模型在训练中可能已经见过 benchmark 数据（prompt leak），或者 benchmark 的题目分布恰好匹配训练分布。Ornith 在 Terminal-Bench 2.1 上拉出断层优势（64.2 vs 53.5），但在 SWE-Bench 上只领先 Qwen3.5-35B 5.6 分。benchmark 的选择本身就会改变「哪个模型更强」的结论。
+
+<strong>缺少 loop coherence 测量</strong>。DeepSWE 的 114 个真实任务中，35B 几乎不陷入 endless loop——这比它的 SWE-Bench 分数更有参考价值。但没有一个标准 benchmark 测量这个维度。
+
+<p>正确的评估方法：benchmark 做初筛——过滤掉明显不合格的模型。终判只来自你自己的真实工作流。用你日常最频繁的 3 个真实任务跑一遍，观察三个指标——agentic loop 中的 coherence（每轮行为是否是上轮的自然延续）、tool-use 准确率（调用工具的格式和参数是否正确）、自我纠错能力（遇到错误后能否自己修正而非喊停）。</p>
+
+<blockquote>benchmark 无法预测 agentic loop 中的表现——kimi-2.6 参数大 10 倍但 UART 怎么都不过。</blockquote>
+<blockquote>— ChipTDD 对照实验</blockquote>
+
+<strong>你会什么时候用到这个？</strong>
+
+<p>当一个新模型发布、社区一片叫好，你在纠结要不要切过去——不急着看 benchmark。用你的标准任务跑 3 遍。如果 3 次结果方差大（同任务有时过有时不过），模型的稳定性存疑——比平均分低更值得警惕。</p>
+
+<hr>
+
+<h2>⚠ 陷阱清单：这些坑已经有人替你踩了</h2>
+
+<h3>1. 以为 self-scaffolding = 模型自己写 prompt</h3>
+
+<p>不是。Scaffold 包含推理序列、记忆组织、调试策略、工具调用顺序、执行计划——是架构级别的搜索编排。把它当成「高级 prompt engineering」的人，会低估 harness 设计的复杂度。</p>
+
+<h3>2. Agent 卡住就换更大的模型</h3>
+
+<p>卡住通常是搜索空间问题而非能力问题。大模型在同一个无约束的搜索空间里同样可能振荡。先检查 loop 的 evaluate 阶段有没有给模型新的、有意义的信息。如果没有——加约束，不是换模型。</p>
+
+<h3>3. 让模型自评对错</h3>
+
+<p>模型自评时，判断和被判断的内容来自同一个参数分布——错误被系统性地看不见。判决权必须外置给独立工具。如果你的 CI 允许模型修改测试代码后再跑——判决回路已被污染，模型可以改测试来让自己通过。</p>
+
+<h3>4. 把迭代次数多当作模型差</h3>
+
+<p>ChipTDD UART 案例中 35B 迭代 20 次，旗舰模型迭代 3 次。最终质量相当。迭代多不是缺点——只要 verifier 能判定对错，迭代次数就是时间换成本，不是能力换质量。本地推理零成本零延迟，多跑几轮几乎没有代价。</p>
+
+<h3>5. 小模型能做所有事</h3>
+
+<p>9B 在 unattended 24/7 agent 中 hallucination 较多——素材中只用一笔带过，但这是一个真实的硬边界。小模型覆盖的是 routine、有 verifier、结构化的任务。开放式探索、需要跨领域推理、没有自动 verifier 的任务——用大模型。</p>
+
+<hr>
+
+<h2>作者的局限：读这篇文章要打的折扣</h2>
+
+<strong>素材时效性与选择偏差</strong>。所有案例来自 Ornith-1.0 发布后一个月，长期稳定性未经验证。用得好的人才发帖——失败案例被系统性低估。
+
+<strong>Benchmark 的生态位差异</strong>。Terminal-Bench 2.1 可能恰好匹配 Ornith 的训练分布。SWE-Bench 上 35B 的 75.6 相比 Qwen3.5-35B 的 70.0 提升只有 5.6 分——不像 Terminal-Bench 上那样拉出断层优势。
+
+<strong>Self-scaffolding 泛化性未验证</strong>。目前所有案例来自 Ornith，这一范式能否泛化到其他模型系——无数据支撑。如果你用的是 Llama 或 Qwen 系模型，self-scaffolding 的红利可能吃不到。
+
+<strong>「方法论 > 参数量」的边界</strong>。全程围绕「可验证的结构化任务」。创意写作、战略分析、开放式对话——这个结论是否成立，素材无任何证据。任务没有明确 verifier 时，参数规模仍然是胜负手。
+
+<strong>生产级可靠性不足</strong>。24/7 unattended loop 的长期稳定性——内存泄漏、状态漂移、累积误差——所有案例都是短期运行，未被讨论。降本 10-30x 的数据是基于 token 价格的静态计算，延迟、并发、队列管理等真实系统开销未被计入。
+
+<hr>
+
+<h2>如果只带走三句话</h2>
+
+<ul><li><strong>Self-scaffolding RL 不训练模型「写对答案」，训练模型「学会怎么找到答案」——这就是为什么 35B 能赢 397B。</strong></li></ul>
+
+<ul><li><strong>模型嵌在 loop 里，loop 约束模型能表达什么。设计 loop 就是设计模型的能力天花板——卡住了加约束，不是换模型。</strong></li></ul>
+
+<ul><li><strong>小模型占 production（高频 routine），大模型占 discovery（低频探索）。路由标准不是任务难度，是有没有自动 verifier。</strong></li></ul>
+
+<hr>
+
+<h2>Monday Morning</h2>
+
+<p>明天上班，做这三件事：</p>
+
+<strong>1. 审计你过去一周的所有 AI coding 调用。</strong> 对每条标注两个维度：① 是否有自动 verifier（编译/测试/linter），② 是 routine 还是探索性任务。算出「有自动 verifier 且为 routine」的调用占比。如果 >70%，你至少可以开始把这些迁移到本地小模型。这一步花 20 分钟。
+
+<strong>2. 对你最想 agent 化的一个任务做 FP 分级。</strong> 拆成 3-7 个 Feature Point，每个 FP 必须：有独立可验证的测试、模型能在一个 RED→GREEN 循环内完成。对每个 FP 写出 pass/fail 的验证方式——如果写不出，说明你对任务的理解还不够细。这一步花 30 分钟。
+
+<strong>3. 搭建一个最简单的 SLM-default 路由 demo。</strong> 本地拉一个 9B 模型（Ollama/LM Studio），写一个 verifier（Python syntax check 就行），跑 10 个简单 coding 任务。记录小模型直接通过的比例和需要 escalate 的比例。如果通过率超过 60%——你的生产环境已经可以开始切了。这一步花 1 小时。
+
+<hr>
+
+<h2>关键术语速查</h2>
+
+<table><tr><td>术语</td><td>含义</td><td>和你想的不一样在哪</td></tr></table>
+
+<table><tr><td>Self-Scaffolding RL</td><td>联合训练「脚手架+答案」，让模型学会编排搜索</td><td>≠ RLHF（只优化输出）≠ prompt engineering（人工写脚手架）</td></tr></table>
+<table><tr><td>Agentic Loop</td><td>plan→execute→evaluate→improve 闭环</td><td>≠ 一次性问答；loop 本身就是模型的能力天花板</td></tr></table>
+<table><tr><td>FP 分级</td><td>按可验证性边界拆分任务，判决权外置</td><td>≠ 按功能模块拆分；粒度标准是「能在一次 RED→GREEN 内完成」</td></tr></table>
+<table><tr><td>SLM-Default+LLM-Fallback</td><td>小模型默认运行，verifier 失败后升级</td><td>≠ 按任务难度分配；标准是 verifier 是否存在，非主观判断</td></tr></table>
+<table><tr><td>Scaffold Families</td><td>面向不同任务类型的脚手架族</td><td>≠ 不同任务用不同模型；同一模型配不同 scaffold 效果天差地别</td></tr></table>
+
+<p>完整词典见 [GLOSSARY.md](./GLOSSARY.md)。</p>
+
+</body>
+</html>

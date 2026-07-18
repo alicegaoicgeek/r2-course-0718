@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>03 · r2-specx：给 pdf spec 装上编译引擎，机器可读驱动交付闭环</title>
+<style>:root{--bg:#1a1a1a;--card:#252525;--text:#e0e0e0;--accent:#ffb347;--muted:#999;--green:#7ecf8a;--blue:#6db3f2;--red:#f27d6d;--purple:#c5a3ff;--border:#3a3a3a}*{margin:0;padding:0;box-sizing:border-box}body{background:var(--bg);color:var(--text);font-family:"PingFang SC","Noto Sans SC",sans-serif;line-height:2.1;font-size:20px;max-width:780px;margin:0 auto;padding:32px 24px 80px;letter-spacing:.04em;word-spacing:.1em}h1{font-size:34px;line-height:1.45;margin-bottom:12px;color:#fff;font-weight:700}.subtitle{color:var(--muted);font-size:18px;margin-bottom:10px}.hook{color:var(--accent);font-size:22px;font-weight:600;margin-bottom:36px;padding:14px 18px;border-left:4px solid var(--accent);background:#2a2a2a;border-radius:0 8px 8px 0}hr{border:none;border-top:1px solid var(--border);margin:36px 0}h2{font-size:26px;color:#fff;margin:36px 0 14px;padding-bottom:6px;border-bottom:2px solid var(--border)}h3{font-size:22px;color:#fff;margin:24px 0 10px}h4{font-size:20px;color:var(--accent);margin:20px 0 8px}p{margin-bottom:14px}ul,ol{margin:10px 0 20px 24px}li{margin-bottom:8px}blockquote{background:#2a2a2a;border-left:4px solid var(--accent);padding:14px 18px;margin:16px 0;border-radius:0 8px 8px 0;color:var(--accent);font-weight:600}code{background:#333;color:var(--accent);padding:2px 8px;border-radius:4px;font-size:18px}pre{background:#111;padding:16px;border-radius:8px;overflow-x:auto;margin:16px 0;font-size:16px;line-height:1.6}pre code{background:none;color:var(--green);padding:0}table{width:100%;border-collapse:collapse;margin:16px 0;font-size:18px}th{background:#333;color:#fff;padding:10px 12px;text-align:left;font-weight:700}td{padding:10px 12px;border-bottom:1px solid var(--border)}.key-line{background:#2a2a2a;border-left:4px solid var(--accent);padding:14px 18px;margin:16px 0;font-size:21px;font-weight:600;color:#fff;border-radius:0 8px 8px 0}.tag{display:inline-block;background:#333;color:var(--muted);font-size:14px;padding:2px 8px;border-radius:4px;margin-right:6px}strong{color:#fff}em{color:var(--accent);font-style:normal}</style>
+</head>
+<body>
+<div class="tag" style="background:#534AB7;color:#fff;font-size:16px;padding:4px 14px">P1 R2-AIOS · 03</div>
+<h1>r2-specx：给 pdf spec 装上编译引擎，机器可读驱动交付闭环</h1>
+<hr>
+<p>给 PDF Spec 装上「编译引擎」-机器可读驱动交付闭环</p>
+
+
+<hr>
+
+<h2>开场</h2>
+
+<p>一个流片失败的芯片，Top 2 的原因是什么？Spec 错误和 Spec 变更。</p>
+
+
+<p>你手上那份 200 页的 Spec PDF，架构师写的时候觉得自己写清楚了。但当你让设计师翻译成 RTL、验证工程师翻译成 Testbench、嵌入式工程师翻译成 QEMU 模型——四个人读了同一份文档，产生了四种理解。这不是人不够仔细，是人类阅读理解天然有偏差。</p>
+
+<p>传统做法的解法是"多开会对齐"。但对齐不是开会对齐出来的——对齐的前提是有一个机器可消费的单一结构化描述，每个人看到的只是这份描述的投影。Spec 以 PDF 自然语言存在，不可被自动化工具消费，意味着每个角色各自维护一套隐式的 Mental Model，而这些模型从未显式化、从未被统一。偏差从源头就产生了。</p>
+
+<p>四个角色中，嵌入式工程师不是最弱的环节，而是最关键的瓶颈。软件设计已超过硬件成为 SOC 生产力的最大限制——这意味着 QEMU 模型和驱动模板与 RTL 同等重要，不是"顺带生成"，而是 specx 必须同时满足硬软件两条线。</p>
+
+<p>这就是 specx 要解决的。一句话：<strong>把"人读 Spec"变成"机器读数据"。</strong></p>
+
+<p>Spec PDF 进去，LLM 提取 12 类结构化信息，输出 SSoT JSON。六条同源产线从同一份数据扇出——RTL、Testbench、QEMU 设备模型、UVM 配置、寄存器生成、SoC 集成。结构上不可能不一致。</p>
+
+<p>但更关键的不是"快"，是"准"。specx 不仅是提取工具，更是 <strong>Spec 的系统性暴露器</strong>。编译过程本身就是对 Spec 的第一次形式化拷问。</p>
+
+
+<hr>
+
+<h2>两条独立路线，同一个 TDD 结论</h2>
+
+<p>第一：Spec 本身就不完整——测试先把规格问清楚</p>
+
+<p>敏捷 IC 中的 <strong>TDD</strong>、<strong>ATDD</strong> 与 <strong>Specification by Example</strong>，核心主张是用具体可执行的例子定义硬件需求，在团队层面实现「测试即规格」——架构师、设计工程师与验证工程师不再各自读 PDF，而是通过共享的可执行规格对齐理解。</p>
+
+<p>方法 2 把同一逻辑落到工程：<code>.feature</code> 用验收视角写场景，<code>step definition</code> 映射到 UVM sequence / monitor，规格从静态文档变成可执行代码，直接消解「文档与 testbench 两张皮」。</p>
+
+<blockquote>当这些可执行规格第一次跑起来——对应 TDD 的 <strong>RED 阶段</strong>——失败的不是 RTL，往往是 Spec 本身：</blockquote>
+<p>> </p>
+<blockquote>-「有效」指哪个信号组合？</blockquote>
+<blockquote>- 判定条件在哪一节？</blockquote>
+<blockquote>- 复位是同步还是异步？</blockquote>
+<p>> </p>
+<blockquote>架构师以为「大家都懂」的隐含前提，机器不会替你补。<strong>Spec 不是终审权威，它只是可被测试修正的起点。</strong></blockquote>
+
+<hr>
+
+<p> 第二：即使 Spec 写清了，实现仍有 bug——断言第一次跑就能停住</p>
+
+<p>TDD「测试先行」在硬件验证里最严格的实现：RTL 编写之前，先从 spec 逐条提取「必须满足」的规则，改写为 <strong>SVA 属性</strong>并 bind 到接口；RTL 仅有接口定义时即可跑形式验证，断言失败即 bug——只允许修 RTL 或修断言。</p>
+
+<strong>PDD</strong> 在同一条路上给出了结构同构的变体：先写形式属性与 SVA，再写满足属性的 RTL——先定义期望行为，再写实现，最后用自动化验证确认。适用场景明确包括 AXI/APB/PCIe 等接口清晰的总线模块（方法 7）。
+
+<blockquote>不是回归跑十遍、不是人工盯波形三天——<strong>属性/断言第一次跑，反例或失败就会停住。</strong></blockquote>
+
+<hr>
+
+<h2>闭环</h2>
+
+<p>两件事合在一起，无论 Spec 写得好不好，只有测试（可执行规格、属性、断言）才能同时暴露规格歧义与实现缺陷。</p>
+
+<code>r2-specx</code> 把这条闭环推进一步：形式验证返回反例 → 反馈修正规格或 RTL → 再验证，直到全部通过——TDD 的 <strong>Red-Green-Refactor</strong> 在 AI 语境下变成「<strong>生成–验证–精炼</strong>」。
+
+<hr>
+
+<h2>旧地图——为什么"多开会对齐"是伪命题</h2>
+
+<p>你刚接手一个 IP 的 Spec。架构师花了两周写的，PDF，80 页。他觉得自己写清楚了。但你知道，从这份 Spec 到最终能流片的 RTL，中间隔着四道翻译——</p>
+
+<p>第一步，设计师读 Spec，画出 RTL 结构。他把"输入信号有效时拉低复位"理解成"低电平有效"。</p>
+
+<p>第二步，验证工程师读同一份 Spec，写 Testbench。他把"复位拉低"理解为"高电平有效"，因为他以前见过的同类模块都是高电平有效。</p>
+
+<p>第三步，嵌入式工程师读 Spec，写 QEMU 设备模型。他忽略了"有效"的定义，直接按默认值初始化了寄存器。</p>
+
+<p>第四步，软件驱动工程师读 Spec，写寄存器访问库。他把寄存器偏移量算错了一位。</p>
+
+<p>四个人读了同一份文档，产生了四种理解。然后呢？开会。一轮一轮地对齐。对齐了又对齐，这不是人的问题，是载体的问题。Spec 以 PDF 自然语言存在，自然语言天然有歧义。"有效"——什么有效？信号？数据？配置？"尽快"——多快？一个时钟周期？十一个？"如果输入被认为是 Active"——谁判定？判定依赖什么？</p>
+
+<p>架构师觉得写清楚了，因为他脑子里有完整的 Mental Model。但 PDF 装不下 Mental Model。每个角色各自在自己的脑子里维护一套隐式的、未被统一的设计意图图谱。这些图谱从未显式化、从未被统一。偏差从源头就产生了。</p>
+<p>「几十年来，设计师一直在各种抽象层级上推理系统（框图、不完整状态图、程序模型等），却几乎得不到设计自动化工具的支持。若要实现必要的生产率提升，这种状况必须在不远的将来改变。」</p>
+<p>>这是"每人脑子里一套隐式 Mental Model"的工业界权威版——非形式化推理 + 工具不支持 = 偏差源头。"</p>
+
+
+<p>传统做法的解法是"多开会对齐"。但你有没有想过——对齐的前提是有一个机器可消费的单一结构化描述。没有这个前提，对齐就是开会对齐出来的。而开会对齐出来的东西，不是真理，是妥协。</p>
+
+<p>妥协的代价是什么？流片失败。项目延期。两个原因占 Top 2：Spec 错误和 Spec 变更。这不是边缘情况，这是行业常态。</p>
+
+
+<blockquote>「为避免设计成本指数级增长，芯片上设计功能的整体生产力必须以每技术代超过 2 倍的速度提升。」「单颗芯片上能实现的系统复杂度已极其巨大，但要可靠且经济地兑现这一潜力，设计生产率需在今天的基础上提升约 50 倍。」</blockquote>
+<p>>给"行业常态"一个定量锚——硅能力已远超驾驭能力，2 倍/代 与 50 倍总缺口，是"为什么必须让机器读 Spec"的规模理由。</p>
+
+
+
+<p>沿着旧地图，找不到新大陆。用不可靠的自然语言 Spec，造可靠的芯片。旧地图的答案是把不可靠交给开会去修，新地图的答案是先把 Spec 本身变成可靠的机器数据。对仗形成。</p>
+
+<p>新地图的第一步，不是"怎么对齐"，而是——"怎么让机器读"。</p>
+
+
+
+<hr>
+
+<h2>新地图——Executable Spec</h2>
+
+<p>新地图的起点是一句话：<strong>Spec 不是文档，是数据。</strong></p>
+
+<p>把可执行规范类比为"系统级的 RTL 革命"——就像当年 RTL 取代门级设计一样，可执行规范将取代 PDF Spec。</p>
+
+<p>数据不能被 PDF 承载。数据需要结构化描述，需要机器可读的格式，需要一个唯一信源。</p>
+
+<p>r2-specx 就是干这个的。它的架构可以概括成一句话：Spec PDF 进去，12 类结构化信息出来，SSoT JSON 输出。</p>
+
+<p>12 类元信息是什么？不是知识罗列，是"机器读数据的字典"——寄存器定义、功能点、时序约束、中断模型、有限状态机、信号定义、内存映射、总线协议、功耗要求、软硬件接口、集成约束、性能指标。</p>
+
+
+<p>输出 SSoT JSON 之后，六条同源产线从同一份数据扇出——</p>
+
+<p>RTL 生成，基于 Spec 的结构化描述直接生成寄存器模块。</p>
+
+<p>Testbench 生成，从 Feature Point 自动生成测试激励。</p>
+
+<p>QEMU 设备模型，从寄存器定义生成模拟设备。</p>
+
+<p>UVM 配置，从信号定义和时序约束自动生成验证环境骨架。</p>
+
+<p>寄存器生成器，从寄存器定义直接输出 C 头文件和驱动模板。</p>
+
+<p>SoC 集成，从集成约束自动生成互联拓扑。</p>
+
+<p>六条产线从同一份 SSoT 派生，结构上不可能不一致。所有变更必须通过 SSoT 统一回灌。一份 Spec，三种投影——架构视角、验证视角、软件视角——零偏差。</p>
+
+<p>但这里有一个关键的设计约束。specx 不是随便一个 LLM 脚本，它遵循三条铁律：</p>
+
+<p>第一：LLM 只 Parse/Draft，禁止直接 Build RTL。LLM 是翻译官，不是建筑师。它负责把 Spec 翻译成像，但它不直接写 RTL。写 RTL 的是 r2-tdd，读的是 SSoT。</p>
+
+<p>第二：改 SSoT = 改一切，禁止旁路修改下游。一致性是结构给的，不是检查出来的。你改了一个寄存器定义，六条产线全部自动重生。</p>
+
+
+<p>第三：每个产物必须 spec_reference 追溯到原文页码/行号。无追溯不入库。签核责任链由此成立——谁改了、改了什么、对应 Spec 原文哪一页，清清楚楚。</p>
+
+
+<p>这三条铁律不是建议，是约束。违反任何一条，整个体系退化为普通文档工具。</p>
+
+<p>为什么这三条铁律这么重要？因为你砍掉 specx——六条产线同时断粮。它是唯一翻译层，不是辅助工具。</p>
+
+<p>但这还不够。SSoT 本身可能是错的。六条产线和一份错误的 SSoT 完美一致，等于更高效地流向一次误流片。</p>
+
+<p>所以我们需要第二层保障。</p>
+
+<hr>
+
+<h2>真理之锚——三层机械闭环</h2>
+
+<p>一致性不等于正确性。这是 specx 体系最重要的一个认知。</p>
+
+
+<p>一个正确的 SSoT 加上六条正确的产线，产出的是正确的产品。一个错误的 SSoT 加上六条正确的产线，产出的是更高效的错误产品。</p>
+
+<p>所以 specx 体系必须显式回答一个问题：SSoT 怎么保证没歪曲 Spec？</p>
+
+<p>答案是三层。每一层一个机械判据，不是人说了算，是机器判的。</p>
+
+<p>层一：文本忠实。</p>
+
+<p>SSoT 的每一个条目，必须能追溯到 Spec 原文的哪一页、哪一行。lintx 五层质量门禁——完整性大于 95%，准确性抽查大于 98%，可追溯性 100%，粒度每 FP 断言 2 到 10 条，分类正确率大于 95%——未过 lintx 的草稿严禁写入 SSoT。</p>
+
+
+<p>层一的锚是 Spec 原文。这一层保证 SSoT 没有歪曲 Spec 说了什么。</p>
+
+<p>但 Spec 说了什么，和 Spec 想表达什么，往往不是一回事。</p>
+
+<p>层二：意图补全。</p>
+
+<p>行业老手知道但 Spec 没写的隐含约束，由约 10 分钟人审补全。每条补全署名落库，写在 tacit_notes 字段里。人花的 10 分钟全部花在只有人知道的事情上。</p>
+
+<p>这 10 分钟不是浪费时间。这 10 分钟的价值是——把锁在资深工程师脑子里的判断，变成可追溯、可复用、可蒸馏的显性资产。</p>
+
+<p>层三：事实校准。</p>
+
+<p>真理最终落在仿真事实，而非 Spec 文本。r2-trace 把预期 JSON 和事实 JSON 做对比，偏差自动回灌 SSoT。</p>
+
+<p>这就是层三的力量。Spec 说"应该"，仿真告诉你"实际"。如果两者不一致，Spec 是错的，不是仿真。</p>
+
+<p>三层合在一起，构成一个机械闭环。每一层解决一个不同的问题：层一防歪曲，层二防遗漏，层三防错误。</p>
+
+
+<p>但这个闭环还有一个更深的哲学含义。</p>
+
+<p>specx 走的是 Test-Driven Discovery。它不证明翻译过程是对的——翻译器不可信没关系，验证器可信就够了。它证明的是翻译结果是对的。怎么证明？用测试。</p>
+
+<p>这跟"构造即正确"路线的分水岭就在这儿。构造即正确说：如果 Spec 是对的，生成的代码就是对的。specx 说：Spec 可能是错的，Spec 没说的可能比 Spec 写的重要，实现可能有 Spec 没想到的 bug。</p>
+
+<p>不信？两个例子。</p>
+
+<p>第一个例子：Spec 本身就有 bug。</p>
+
+<p>实测 104 条需求中，78 条在 TDD 的 RED 阶段被改进和澄清。</p>
+
+<p>什么意思？specx 把自然语言需求翻译成 FP 时，会逐一追问。</p>
+
+<p>"有效"到底指哪个信号组合？判定条件写在哪个章节、哪个段落？PENDING 标志是当拍置位还是异步清零？需要全局使能配合吗？</p>
+
+<p>这些问题架构师觉得"大家都懂"。机器不这么想。机器追问，架构师回答，回答的过程中发现——哦，这里没写清楚。</p>
+
+<p>78 条被改。78 out of 104。意味着原始 Spec 有七成以上存在歧义、遗漏或自相矛盾。</p>
+
+<p>Spec 不是权威。它只是一个起点。</p>
+
+<p>第二个例子：即使 Spec 完整，实现仍有 bug。</p>
+
+<p>APB 桥的 FP55——并发写缓冲数据完整性。specx 从 Spec 里提取了这个 FP，r2-tdd 根据它生成断言，断言首次运行就抓到了一个真实的写缓冲区竞争死锁。</p>
+
+<p>不是跑了十遍之后。不是人工盯了三天之后。第一条断言第一次跑，就停住了。</p>
+
+<p>这是什么意思？Spec 把写缓冲的要求写清楚了。RTL 也按 Spec 写了。但 Spec 没有考虑到——两个不同功能域的断言同时跑的时候，会发生什么。</p>
+
+<p>先写 RTL 的人不会同时从两个功能域审视同一段逻辑。这是工程常识，也是人性弱点。但机器没有这个弱点。机器可以同时从一百个角度审视同一段逻辑。</p>
+
+<p>这两个例子合在一起，证明了一个结论：无论 Spec 写得好不好，只有测试才能发现真正的 bug。</p>
+</body>
+</html>

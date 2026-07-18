@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>16 · 选对 Loop，用好 Agent：芯片工程师的 AI 循环实战指南</title>
+<style>:root{--bg:#1a1a1a;--card:#252525;--text:#e0e0e0;--accent:#ffb347;--muted:#999;--green:#7ecf8a;--blue:#6db3f2;--red:#f27d6d;--purple:#c5a3ff;--border:#3a3a3a}*{margin:0;padding:0;box-sizing:border-box}body{background:var(--bg);color:var(--text);font-family:"PingFang SC","Noto Sans SC",sans-serif;line-height:2.1;font-size:20px;max-width:780px;margin:0 auto;padding:32px 24px 80px;letter-spacing:.04em;word-spacing:.1em}h1{font-size:34px;line-height:1.45;margin-bottom:12px;color:#fff;font-weight:700}.subtitle{color:var(--muted);font-size:18px;margin-bottom:10px}.hook{color:var(--accent);font-size:22px;font-weight:600;margin-bottom:36px;padding:14px 18px;border-left:4px solid var(--accent);background:#2a2a2a;border-radius:0 8px 8px 0}hr{border:none;border-top:1px solid var(--border);margin:36px 0}h2{font-size:26px;color:#fff;margin:36px 0 14px;padding-bottom:6px;border-bottom:2px solid var(--border)}h3{font-size:22px;color:#fff;margin:24px 0 10px}h4{font-size:20px;color:var(--accent);margin:20px 0 8px}p{margin-bottom:14px}ul,ol{margin:10px 0 20px 24px}li{margin-bottom:8px}blockquote{background:#2a2a2a;border-left:4px solid var(--accent);padding:14px 18px;margin:16px 0;border-radius:0 8px 8px 0;color:var(--accent);font-weight:600}code{background:#333;color:var(--accent);padding:2px 8px;border-radius:4px;font-size:18px}pre{background:#111;padding:16px;border-radius:8px;overflow-x:auto;margin:16px 0;font-size:16px;line-height:1.6}pre code{background:none;color:var(--green);padding:0}table{width:100%;border-collapse:collapse;margin:16px 0;font-size:18px}th{background:#333;color:#fff;padding:10px 12px;text-align:left;font-weight:700}td{padding:10px 12px;border-bottom:1px solid var(--border)}.key-line{background:#2a2a2a;border-left:4px solid var(--accent);padding:14px 18px;margin:16px 0;font-size:21px;font-weight:600;color:#fff;border-radius:0 8px 8px 0}.tag{display:inline-block;background:#333;color:var(--muted);font-size:14px;padding:2px 8px;border-radius:4px;margin-right:6px}strong{color:#fff}em{color:var(--accent);font-style:normal}</style>
+</head>
+<body>
+<div class="tag" style="background:#854F0B;color:#fff;font-size:16px;padding:4px 14px">M4 刷loop · 16</div>
+<h1>选对 Loop，用好 Agent：芯片工程师的 AI 循环实战指南</h1>
+<hr>
+
+
+<p>你用了三个月 Claude Code。你知道它能改代码、修 bug、写文档。但你每次都得手动告诉它下一步做什么——你才是那个「判断做完了没有」的人。</p>
+
+<p>直到你发现 <code>/goal</code> 跑了两轮就在改不该改的源码。你以为是 prompt 写得不好，反复调 wording。其实不是。你从一开始就没搞清楚一个问题：<strong>谁来判断「做完了」？</strong></p>
+
+<p>这个问题把 Claude Code 的用户劈成两群人。一群人把 loop 当 cron 用——到时间就触发，至于结果对不对、什么时候停、出错了怎么办，全部靠运气。另一群人把 loop 当系统设计——选对循环类型、写清停止条件、加独立验证、设计失败策略，让循环自主、可靠、可控地跑。</p>
+
+<p>差距不在模型智能，在系统设计。</p>
+
+<hr>
+
+<h2>四种循环，不是四档变速</h2>
+
+<p>Claude Code 团队按四个维度把循环分成四类：<strong>怎么触发、怎么停、用什么原语、适合什么任务</strong>。但这四种不是「从弱到强」的递进，每一种的底层机制完全不同。</p>
+
+<strong>轮次循环（Turn-based）</strong> 是你最熟悉但可能没意识到的默认模式。每条 prompt 都是一轮：Claude 收集上下文 → 执行 → 自查 → 不够再来 → 返回。它内部有一个「智能体循环」（agentic loop）的节拍——收集、执行、检查、反馈——这是 agent 工作的基本单位。
+
+<p>但你仍然是那个判断停不停的人。你交出去的是<strong>检查</strong>：把你人工验证的步骤写成 SKILL.md，让 Claude 自己对照检查。</p>
+
+<strong>目标循环（<code>/goal</code>）</strong> 是你知道「做完是什么样」时的选择。你给出硬性退出标准，一个独立的评估模型（默认 Haiku）每轮结束后检查是否达标，不达标就送回继续。你把「判断做完了没有」这件事也交出去了——交给的不是你的 prompt，是那个评估模型。
+
+<p>这里有一个反直觉的约束：<strong>评估模型只看对话，不读文件，不运行命令。</strong> 它判断条件成立的唯一依据是 Claude 在对话里展示了什么。你写「确保文件 X 存在」，评估模型看不到文件 X。你要写「Claude 输出 <code>npm test</code> 退出码为 0」——这是一段对话文本，评估模型能读到。</p>
+
+<strong>定时循环（<code>/loop</code>）</strong> 本质是 cron + prompt。从源码层面看，它只做一件事：到时间了，把 prompt 塞给 agent。没有 evaluator，没有自动判断「是否达标」的系统组件。判断「继续还是停」「这个错误该重试还是放弃」的智能，<strong>全在你写的 prompt 里</strong>。
+
+<code>/loop</code> 跑在本地，关机就停；<code>/schedule</code> 把循环挪到云端，电脑关了也继续跑。
+
+<strong>主动循环（Proactive）</strong> 是前三种 + auto mode + dynamic workflows 的组合编排。它用于持续涌入的、定义清晰的工作流——比如不断进来的 bug 报告、issue 分诊、依赖升级。你交出去的是 prompt 本身。
+
+<h3>选型关键不在「哪种更强」，在「你能交出什么」</h3>
+
+<p>这不是一个技术偏好问题，是一个设计约束问题。</p>
+
+<p>你能写出可验证的检查清单吗？能 → turn-based + SKILL.md。</p>
+<p>你能写出量化的完成标准吗？能 → <code>/goal</code>。</p>
+<p>工作有固定节奏吗？有 → <code>/loop</code>。</p>
+<p>三者都不满足？先用 turn-based 手动跑一轮，搞清楚你到底想要什么。</p>
+
+<p>选错的代价不是「效率低一点」，是循环往错误的方向用力。比如：你让 <code>/goal</code> 去跑「让 PR 准备好合并」——但 PR 能不能合并不取决于 Claude 干得好不好，取决于外部 reviewer。评估模型看不到 GitHub 的 merge 按钮。正确的选型是 <code>/loop 5m 检查我的 PR，处理 review 意见，修复挂掉的 CI</code>——触发条件是时间驱动，停止由人控制。</p>
+
+<p>反过来，你让 <code>/loop</code> 跑「把 Lighthouse 分数提到 90 以上」——但 <code>/loop</code> 没有 evaluator，每轮是独立执行，无法跨轮迭代改进同一个产物。这才是 <code>/goal</code> 的教科书场景。</p>
+
+<hr>
+
+<h2>循环的核心不在循环，在停止条件</h2>
+
+<p>你写了一个 <code>/goal</code>，条件写的是「让代码质量更好」。Claude 跑了一轮就停了，说「已完成」。你打开代码——什么都没变。</p>
+
+<p>不是 Claude 偷懒。是你的停止条件等于没写。</p>
+
+<strong>停止条件不是「你希望达到什么」，是「Claude 的输出能证明什么」。</strong> 评估模型不看文件，它只看对话。你写的停止条件，是在给评估模型写判卷标准——这篇文章 Claude 说了什么，你就判它过。
+
+<p>一个好的停止条件包含三个要素：</p>
+
+<ul><li><strong>可衡量的终态</strong>——测试通过数、分数阈值、退出码。确定性标准能扛住多轮，「觉得更强大」不能。这不是偏好问题，是评估模型的机制决定的：Haiku 可以判断「Claude 说测试全过了」是真还是假，但无法判断「战略文档变得更强大」是否成立。</li></ul>
+<ul><li><strong>明确的检查方式</strong>——什么命令、什么输出算达标。不要写「确保测试通过」，写「<code>npm test</code> 退出码为 0」。</li></ul>
+<ul><li><strong>重要约束</strong>——过程中不能改变的东西。如「不修改其他测试文件」，以及轮数上限（<code>stop after N turns</code>）。</li></ul>
+
+<p>官方示例：「<code>/goal 把首页的 Lighthouse 分数提到 90 以上，试 5 次就停</code>」。三个要素齐全：终态是分数 ≥ 90，检查方式是 Lighthouse 报告的数值，约束是最多 5 轮。</p>
+
+<p>反面教材来自原文：「每天持续优化产品战略文档，直到觉得它变得更强大」。没有可衡量终态，没有检查方式，没有轮数上限。作者自己给的判决：要么什么都不做，要么对你不想改的文件大肆破坏。这里的差别不在模型智能，<strong>在停止条件有没有被设计</strong>。</p>
+
+<code>/goal</code> 的条件最多 4000 字符。如果你的停止条件里出现了「我觉得」「看起来」「差不多了」——这些词对评估模型来说是白噪声，和没写一样。
+
+<hr>
+
+<h2>干活的不能是检查的</h2>
+
+<p>你以为「让 AI 自己看看行不行」也是一种验证。Claude Code 官方的判断是：<strong>弱验证几乎不算验证。</strong></p>
+
+<p>原因不在模型不够聪明。同一个 session 里的 agent 带着生成时的推理惯性——它用同样的假设、同样的盲点来检查自己的产出。这不是技术问题，是认知问题：让你自己批自己的卷子，你也能找到理由说服自己每道题都对了。</p>
+
+<strong>强验证有四条设计要点：</strong>
+
+<ul><li>验证步骤必须独立运行——不同的 session 或不同的 prompt 逻辑</li></ul>
+<ul><li>对照硬性指标逐条检查——不是「看看行不行」，是「对照 LOOP_INSTRUCTIONS.md 第 N 条，标记 PASS/FAIL」</li></ul>
+<ul><li>生成包含 PASS/FAIL 的健康报告——列出哪些检查过了、哪些没通过、哪些文件被修改了、有没有需要人工确认的疑点</li></ul>
+<ul><li><strong>验证器绝对不能修改任何文件</strong></li></ul>
+
+<p>第四条是最容易被忽略的硬性红线。一旦验证器被允许修改文件，它就变成了第二个 worker——它会在发现问题的同时「顺手修复」，然后告诉你验证通过了。你得到的不是验证，是带着盲点的确认。</p>
+
+<p>官方给的 <code>verify-frontend-change</code> SKILL 模板展示了强验证的设计：每次 UI 改动后，启动 dev server → 浏览器交互控件并截图 → 检查控制台零报错 → Chrome DevTools MCP 跑性能 trace。任何一步失败，修复后从第 1 步重跑，不交回只验证了一半的工作。</p>
+
+<p>停止条件和独立验证是两种 QA 机制，正交但互补。停止条件让循环知道何时退出，独立验证让产出不被自欺。你可以在 <code>/goal</code> 里写「所有测试通过」作为停止条件，但只有独立验证能告诉你：那些测试真的通过了吗，还是 agent 改了测试让它通过？</p>
+
+<p>官方还建议用第二个 agent 做 code review——独立 session，新鲜上下文。验证 agent 对照 SKILL.md 编码的团队标准逐条 PASS/FAIL。关键约束：它只能产出 PASS/FAIL 报告，<strong>不能输出修复建议</strong>。修复是 worker 的事，不是 inspector 的事。</p>
+
+<hr>
+
+<h2>不需要数据库，4 个 Markdown 文件就够了</h2>
+
+<p>你以为跑循环需要数据库、后端服务、消息队列。Claude Code 官方说：你只需要 4 个 Markdown 文件。不是简化的教学比喻——这就是推荐架构。</p>
+
+<pre><code>my-loop/
+<p>├── TASK.md              # 终极目标——这个循环是干什么的</p>
+<p>├── LOOP_INSTRUCTIONS.md # SOP——怎么跑，能做什么不能做什么</p>
+<p>├── PROGRESS.md          # 状态——上次发生了什么，下次该干嘛</p>
+<p>└── outputs/             # 产物目录</code></pre></p>
+
+<p>四个文件各有分工，混淆职责是系统退化的主要来源。</p>
+
+<strong>TASK.md</strong> 写两件事：终极目标（高层级，不要写操作细节）和明确的禁止规则。每个循环的第一个版本必须有禁止规则——不是不信任 Claude，是专业的工程纪律：「禁止删除或重命名文件」「禁止直接发送消息或开 Ticket」。
+
+<strong>LOOP_INSTRUCTIONS.md</strong> 是 SOP。精确控制 Claude 读什么、写什么、绝对不碰什么、停之前怎么自我验证。这个文件包含了停止条件的验证清单和异常失败策略。TASK.md 管目标，LOOP_INSTRUCTIONS.md 管边界——混在一起会让循环在执行和约束之间摇摆。
+
+<strong>PROGRESS.md</strong> 是循环的灵魂。<strong>状态必须存在于聊天窗口之外。</strong> 没有它，每次运行从零开始；有了它，Claude 拥有跨会话记忆。
+
+<p>但 PROGRESS.md 不是日志，是控制面板。两条铁律：</p>
+
+<ul><li>下次决策需要的信息 → 留在 PROGRESS.md</li></ul>
+<ul><li>只是存档备份 → 移到 outputs/history/</li></ul>
+
+<p>永远膨胀的状态文件是没有用的。膨胀到失控的那一刻，就是你失去对循环控制的那一刻。</p>
+
+<strong>outputs/</strong> 是权限控制的第一道防线。Claude Code 的权限分 6 级阶梯：Level 1 只读 → Level 2 只能写入 outputs/ → Level 3 沙箱编辑 → Level 4 草拟外部动作 → Level 5 人工授权 → Level 6 自动化低风险。<strong>第一个循环必须停在 Level 1 或 Level 2。</strong> 这不是能力不足，是成熟的工程实践。即使在只读和草拟阶段，循环也能提供巨大价值——检查 GitHub issues、审查 CI 失败、审计 PR、汇总信息，全都不碰重要文件。
+
+<hr>
+
+<h2>失败不是意外，LLM 被训练成永远回答</h2>
+
+<p>你的循环跑了 3 轮，每轮都卡在同一个错误上。它还在重试——不是因为它有毅力，不是因为它「认为这次能行」。是因为你没告诉它什么时候该停手。</p>
+
+<p>LLM 的默认行为是「永远给出一个回答」，而不是「判断什么时候应该停手」。这不是 bug，是设计特征——模型被训练成在任何输入下都产生输出。但循环需要的是相反的东西：判断「这个错误我搞不定，应该通知人」。</p>
+
+<strong>不写失败策略时，异常状态的行为由模型随机性驱动，而非工程设计。</strong>
+
+<p>失败策略的核心是错误分类。不是所有失败都该重试：</p>
+
+<table><tr><td>错误类型</td><td>特征</td><td>策略</td></tr></table>
+
+<table><tr><td><strong>基础设施错误</strong></td><td>token 过期、API 不可用、权限不足</td><td>不重试，标记状态，通知用户</td></tr></table>
+<table><tr><td><strong>内容错误</strong></td><td>逻辑 bug、测试失败、格式问题</td><td>可重试 1-2 次，相同错误连续 N 次→退出</td></tr></table>
+
+<p>公众号监控案例把这种判断力展示得最清楚。cron 脚本遇到 token 过期就是静默失败——一行 traceback 躺在日志里，你第二天才发现少了一天数据。但 agent 能判断：API 返回 <code>ret=200003</code> → 这是凭证过期而非内容问题 → <strong>不重试</strong> → 标记状态为 <code>token_expired</code> → 通知你扫码 → 下一轮先做轻量检测，token 没恢复直接跳过。这个判断不在调度器里，<strong>在 prompt 里</strong>。</p>
+
+<p>官方 LOOP_INSTRUCTIONS.md 模板里内置了失败策略的三级响应：报告缺失章节 → 尝试修复一次；PROGRESS.md 未更新 → 尝试更新一次；红线外源码被修改 → 立即无条件终止。注意区分：前两种是可重试的操作失误，第三种是安全红线，不是「所有失败都重试」——是「不同失败不同处理」。</p>
+
+<p>相同错误连续失败 N 次的判停条件尤其关键。没有它，agent 可能在同一个错误上无限重试，每次换一种说法但本质没变。这不是迭代，是表演迭代。</p>
+
+<hr>
+
+<h2>循环不稳定的原因永远是后三项</h2>
+
+<p>你新写了一个循环，跑了两轮就不对了。是 prompt 写错了？是模型不够聪明？大概率都不是——是你漏了 6 大要素里的一个。而且你排查的方式是改 prompt wording——查对了症状，开错了药。</p>
+
+<p>6 大要素是 Claude Code 团队定义的循环完整性框架，分成两组：</p>
+
+<strong>前三项</strong>（大多数人都会想到）：
+<ul><li><strong>Trigger</strong>（触发）——什么时候跑</li></ul>
+<ul><li><strong>Context</strong>（上下文）——跑之前读什么</li></ul>
+<ul><li><strong>Action</strong>（行动）——跑的时候做什么</li></ul>
+
+<strong>后三项</strong>（大多数人设计循环时不会主动考虑）：
+<ul><li><strong>Verification</strong>（验证）——怎么判断做得好不好</li></ul>
+<ul><li><strong>State Update</strong>（状态更新）——下一轮需要记住什么</li></ul>
+<ul><li><strong>Decision</strong>（决策）——接下来干嘛：继续、停止、还是找人</li></ul>
+
+<p>要素缺失的后果，原文写得简洁锋利：缺验证 → 循环盲目信任自己，容忍垃圾输出。缺状态 → 每次运行退化到从零开始。缺决策 → 循环变成不知道何时停下的死循环。</p>
+
+<p>用 6 要素去诊断那个反面教材「每天持续优化产品战略文档，直到觉得它变得更强大」：Trigger ✓（每天）→ Context ？没写 → Action ？「优化」没范围 → <strong>Verification ✗</strong>「觉得更强大」不可验证 → <strong>State Update ✗</strong> 没写状态文件 → <strong>Decision ✗</strong> 没有停止条件也没有上限。6 个要素缺了 4 个。</p>
+
+<p>循环不稳定的原因几乎永远是后三个要素——Verification、State Update、Decision——不是你 prompt 写得不够好。是你设计的不是一个循环，是一个会重复运行的普通 prompt。</p>
+
+<p>6 要素和 4 文件系统是一体两面：TASK.md 覆盖 Context + Action，LOOP_INSTRUCTIONS.md 覆盖 Action + Verification + Decision，PROGRESS.md 覆盖 State Update。用 6 要素诊断漏了什么，用 4 文件系统把它补上。</p>
+
+<hr>
+
+<h2>周一早上能做的三件事</h2>
+
+<p>读完这篇文章，不要试图把所有模块一次性用上。你的目标是<strong>让第一个循环周一早上就能跑起来</strong>。</p>
+
+<strong>第一步：盘点你已有的重复性工作。</strong> 列出 3 个「你每天都要做才能推进」的任务。对每个任务回答「我能交出什么」——检查清单（turn-based）、量化标准（<code>/goal</code>）、还是固定节奏（<code>/loop</code>）。
+
+<strong>第二步：用 4 文件系统搭第一个循环骨架。</strong> 在项目目录下创建 my-loop/，新建 TASK.md、LOOP_INSTRUCTIONS.md、PROGRESS.md、outputs/。TASK.md 包含明确目标和至少一条禁止规则。PROGRESS.md 填写当前状态。
+
+<strong>第三步：停在 Level 1 或 Level 2 跑 3 天。</strong> 权限只到只读或写入 outputs/。3 天后检查：它读的文件是你要它读的吗？产物质量稳定吗？有没有越权操作？确认稳定后再评估是否升级。
+
+<p>不要在第一天就追求验证完美、策略完备。先跑起来，用 6 要素诊断不稳定的地方，迭代补齐。提醒 AI 一百遍，不如写一条它绕不过的检查。</p>
+
+</body>
+</html>
