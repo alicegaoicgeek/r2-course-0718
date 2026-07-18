@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>R2芯片智能体实战笔记 ｜ 26篇课程地图</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;background:#f5f4f0;color:#2C2C2A;line-height:1.6;padding:32px 16px}
+.wrap{max-width:860px;margin:0 auto}
+.hd{text-align:center;margin-bottom:24px}
+.hd h1{font-size:22px;font-weight:500;letter-spacing:.5px}
+.hd .sub{font-size:13px;color:#888780;margin-top:6px}
+.hd .stats{display:flex;gap:10px;justify-content:center;margin-top:14px;flex-wrap:wrap}
+.hd .st{background:#fff;padding:6px 14px;border-radius:6px;font-size:12px;color:#5F5E5A;border:0.5px solid rgba(0,0,0,.08)}
+.hd .st b{font-size:16px;font-weight:500;color:#2C2C2A}
+
+.vc{background:#fff;border-radius:10px;padding:18px 20px;margin-bottom:18px;border:0.5px solid rgba(0,0,0,.07)}
+.vc-row{display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:nowrap}
+.vc-end{font-size:12px;font-weight:500;padding:4px 10px;border-radius:5px;white-space:nowrap}
+.vc-end.exec{background:#F5F4F0;color:#888780;border:0.5px solid rgba(0,0,0,.08)}
+.vc-end.orch{background:#EAF3DE;color:#3B6D11;border:0.5px solid rgba(0,0,0,.08)}
+.vc-node{display:flex;align-items:center;gap:4px}
+.vc-v{font-size:14px;font-weight:600;padding:5px 12px;border-radius:6px;color:#fff;white-space:nowrap}
+.vc-arrow{color:#B4B2A9;font-size:13px;line-height:1;padding:0 2px}
+.vc-m{font-size:10px;color:#888780;text-align:center;margin-top:2px}
+.vc-legend{display:flex;gap:16px;justify-content:center;margin-top:10px;font-size:11px;color:#888780}
+.vc-legend span{display:flex;align-items:center;gap:4px}
+.vc-legend .dot{width:8px;height:8px;border-radius:2px}
+
+.mod{background:#fff;border-radius:10px;overflow:hidden;margin-bottom:6px;border:0.5px solid rgba(0,0,0,.07)}
+.mh{padding:14px 18px;display:flex;align-items:center;gap:10px;border-bottom:0.5px solid rgba(0,0,0,.06)}
+.mh .tag{font-size:12px;font-weight:500;padding:2px 9px;border-radius:4px;color:#fff;white-space:nowrap}
+.mh .nm{font-size:15px;font-weight:500}
+.mh .arc{font-size:12px;color:#888780;margin-left:auto;white-space:nowrap}
+.mh .cnt{font-size:12px;color:#888780}
+
+.m4l{padding:6px 18px 0;display:flex;gap:16px;flex-wrap:wrap}
+.m4l .ln{font-size:11px;color:#888780;padding:2px 8px;border-radius:3px;background:var(--bg);border:0.5px solid rgba(0,0,0,.05)}
+.m4l .ln b{font-weight:500;color:#444441}
+
+.arts{padding:12px 18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px}
+.art{padding:10px 12px;border-radius:7px;background:var(--bg);border:0.5px solid rgba(0,0,0,.05);display:flex;gap:8px;align-items:center}
+.art .n{font-size:12px;font-weight:500;color:var(--ac);min-width:22px;font-variant-numeric:tabular-nums;flex-shrink:0}
+.art > div:not(.art-checks){flex:1;min-width:0}
+.art .tt{font-size:13px;line-height:1.45}
+.art-checks{display:flex;gap:6px;flex-shrink:0;margin-left:6px;align-items:center}
+.art-checks .ck{
+  display:inline-flex;flex-direction:column;align-items:center;gap:2px;
+  font-size:10px;line-height:1;color:#888780;user-select:none;cursor:pointer;
+}
+.art-checks .ck span{font-variant-numeric:tabular-nums;font-weight:600;color:var(--ac)}
+.art-checks input[type=checkbox]{width:16px;height:16px;margin:0;cursor:pointer;accent-color:var(--ac)}
+.art-checks input[type=checkbox]:checked{opacity:.9}
+.art-checks input.art-score{
+  width:36px;height:18px;margin:0;padding:0 2px;text-align:center;
+  font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;font-family:inherit;
+  color:var(--ac);border:0.5px solid rgba(0,0,0,.18);border-radius:3px;
+  background:rgba(255,255,255,.7);outline:none;cursor:text;
+}
+.art-checks input.art-score:focus{border-color:var(--ac);background:#fff}
+.art-checks input.art-score::placeholder{color:#ccc;font-weight:400}
+.art-checks-legend{
+  display:flex;justify-content:flex-end;gap:10px;padding:0 18px 8px;
+  font-size:11px;color:#888780;
+}
+.art-checks-legend b{color:#5F5E5A;font-weight:500}
+/* 路径总览面板 */
+.pwrap{margin:0 0 32px}
+.ppanel{background:#fff;border-radius:10px;overflow:hidden;border:0.5px solid rgba(0,0,0,.07)}
+.pphd{padding:14px 18px;display:flex;align-items:center;gap:10px;border-bottom:0.5px solid rgba(0,0,0,.06)}
+.pphd .tag{font-size:12px;font-weight:500;padding:2px 9px;border-radius:4px;color:#fff;white-space:nowrap}
+.pphd .nm{font-size:15px;font-weight:500}
+.pgroup{border-bottom:0.5px solid rgba(0,0,0,.06);padding:4px 0}
+.pg-hd{display:flex;align-items:center;gap:6px;padding:4px 14px}
+.pg-hd .pg-pick{width:15px;height:15px;margin:0;flex-shrink:0;cursor:pointer;accent-color:#2C2C2A}
+.pg-hd .pn{font-size:11px;font-weight:600;min-width:20px;flex-shrink:0;font-variant-numeric:tabular-nums}
+.pg-hd .pmod{font-size:9px;font-weight:500;padding:1px 5px;border-radius:3px;color:#fff;min-width:30px;text-align:center;flex-shrink:0}
+.pg-hd .pttl{font-size:12px;color:#2C2C2A;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+.pgroup.is-picked{background:#F0F7EB}
+.pg-row{display:flex;align-items:center;gap:4px;padding:2px 14px 2px 72px}
+.pg-row label{font-size:10px;color:#888780;width:28px;flex-shrink:0;text-align:right}
+.pg-row input{flex:1;font-size:11px;padding:3px 6px;border:0.5px solid rgba(0,0,0,.1);border-radius:3px;background:#fafaf8;outline:none;font-family:"SF Mono",Menlo,Monaco,monospace}
+.pg-row input:focus{border-color:#534AB7;background:#fff}
+
+.fa{text-align:center;padding:2px 0;color:#B4B2A9;font-size:14px;line-height:1}
+
+.m1{--ac:#534AB7;--bg:#EEEDFE}
+.m2{--ac:#185FA5;--bg:#E6F1FB}
+.m3{--ac:#0F6E56;--bg:#E1F5EE}
+.m4{--ac:#854F0B;--bg:#FAEEDA}
+.m5{--ac:#3B6D11;--bg:#EAF3DE}
+
+.part-div{margin:32px 0 24px;text-align:center}
+.part-div span{display:inline-block;padding:6px 16px;font-size:12px;color:#888780;background:#fff;border-radius:20px;border:0.5px solid rgba(0,0,0,.08)}
+
+.slogan-bar{text-align:center;font-size:14px;font-weight:600;color:#C0392B;margin:8px 0 18px}
+.ft{text-align:center;padding:20px 0 4px;font-size:15px;font-weight:500;color:#888780}
+.ft b{display:block;font-size:17px;font-weight:600;color:#2C2C2A;letter-spacing:1px;margin-top:6px}
+
+.toolbar{display:flex;gap:8px;justify-content:center;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.toolbar button{font-size:12px;padding:5px 14px;border:0.5px solid rgba(0,0,0,.12);border-radius:5px;background:#fff;color:#5F5E5A;cursor:pointer;font-family:inherit;transition:background .15s}
+.toolbar button:hover{background:#f0efeb}
+.toolbar .tb-link{
+  font-size:12px;padding:5px 14px;border-radius:5px;text-decoration:none;font-family:inherit;
+  background:#2C2C2A;color:#fff;border:0.5px solid #2C2C2A;transition:opacity .15s;
+}
+.toolbar .tb-link:hover{opacity:.88}
+.toolbar .tb-sep{width:1px;height:18px;background:rgba(0,0,0,.12);margin:0 2px}
+
+/* Todo */
+.todo-panel{background:#fff;border-radius:10px;padding:16px 18px;margin-bottom:18px;border:0.5px solid rgba(0,0,0,.07)}
+.todo-hd{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.todo-hd .nm{font-size:15px;font-weight:500}
+.todo-hd .tag{font-size:12px;font-weight:500;padding:2px 9px;border-radius:4px;color:#fff;background:#C0392B;white-space:nowrap}
+.todo-clock{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:14px 12px;margin-bottom:14px;border-radius:8px;
+  background:#F5F4F0;border:0.5px solid rgba(0,0,0,.06);
+}
+.todo-clock .clk-label{font-size:11px;color:#888780;margin-bottom:4px}
+.todo-clock .clk-time{
+  font-size:36px;font-weight:600;font-variant-numeric:tabular-nums;
+  letter-spacing:2px;color:#2C2C2A;line-height:1.1;
+}
+.todo-clock .clk-task{font-size:12px;color:#5F5E5A;margin-top:6px;max-width:100%;text-align:center}
+.todo-clock.is-over .clk-time{color:#C0392B}
+.todo-clock.is-idle .clk-time{color:#B4B2A9;font-size:28px}
+.todo-form{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.todo-form input[type=text]{
+  flex:1;min-width:160px;font-size:13px;padding:7px 10px;
+  border:0.5px solid rgba(0,0,0,.12);border-radius:5px;background:#fff;font-family:inherit;outline:none;
+}
+.todo-form input[type=text]:focus{border-color:#C0392B}
+.todo-form input[type=number]{
+  width:72px;font-size:13px;padding:7px 8px;text-align:center;
+  border:0.5px solid rgba(0,0,0,.12);border-radius:5px;background:#fff;font-family:inherit;outline:none;
+}
+.todo-form button{
+  font-size:12px;padding:7px 14px;border:0.5px solid rgba(0,0,0,.12);border-radius:5px;
+  background:#2C2C2A;color:#fff;cursor:pointer;font-family:inherit;white-space:nowrap;
+}
+.todo-form button:hover{opacity:.88}
+.todo-list{display:flex;flex-direction:column;gap:6px}
+.todo-item{
+  display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;
+  background:#F5F4F0;border:0.5px solid rgba(0,0,0,.05);
+}
+.todo-item.done .todo-text{text-decoration:line-through;color:#B4B2A9}
+.todo-item input[type=checkbox]{width:16px;height:16px;margin:0;cursor:pointer;accent-color:#C0392B;flex-shrink:0}
+.todo-item .todo-text{flex:1;font-size:13px;min-width:0;word-break:break-word}
+.todo-item .todo-remain{
+  font-size:12px;font-variant-numeric:tabular-nums;font-weight:600;
+  color:#C0392B;min-width:52px;text-align:right;flex-shrink:0;
+}
+.todo-item .todo-remain.ok{color:#3B6D11}
+.todo-item .todo-remain.idle{color:#B4B2A9;font-weight:500}
+.todo-item .todo-actions{display:flex;gap:4px;flex-shrink:0}
+.todo-item .todo-actions button{
+  font-size:11px;padding:3px 8px;border:0.5px solid rgba(0,0,0,.1);border-radius:4px;
+  background:#fff;color:#5F5E5A;cursor:pointer;font-family:inherit;
+}
+.todo-item .todo-actions button:hover{background:#eee}
+.todo-item .todo-actions button.danger{color:#C0392B}
+.todo-empty{font-size:12px;color:#B4B2A9;text-align:center;padding:10px 0}
+
+@media (max-width:600px){
+  .arts{grid-template-columns:1fr}
+  .vc-row{flex-wrap:wrap;gap:6px}
+  .todo-clock .clk-time{font-size:28px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- Toolbar -->
+<div class="toolbar">
+<a class="tb-link" href="https://btlvkj5do63d4.kimi.page" target="_blank" rel="noopener noreferrer" title="碎片集 — 临时笔记">碎片集</a>
+<a class="tb-link" href="https://44vf5xhgzbdf2.kimi.page" target="_blank" rel="noopener noreferrer" title="待办追踪器">待办追踪器</a>
+<a class="tb-link" href="file:///Users/gaoyuan/Workbuddy/2026-07-09-00-40-43/r2-prompts.html" target="_blank" rel="noopener noreferrer" title="R2 提示词库 · AI Prompt Library">R2 提示词库</a>
+<span class="tb-sep" aria-hidden="true"></span>
+<button id="btn-export">导出数据</button>
+<button id="btn-import">导入数据</button>
+<button id="btn-pick-has-md" title="只勾选路径总览里已填 md 的课">勾选有 md</button>
+<button id="btn-pick-clear" title="清空路径勾选">清空勾选</button>
+<button id="btn-copy-zed" title="只复制已勾选且有 md 的课 → zed 多开命令">复制已选 zed</button>
+<input type="file" id="file-import" accept=".json" style="display:none">
+</div>
+
+<!-- 路径总览 -->
+<div class="pwrap" id="path-wrap">
+<div class="ppanel">
+<div class="pphd"><span class="tag" style="background:#2C2C2A">路径</span><span class="nm">全文路径一览</span><span style="margin-left:auto;font-size:11px;color:#888780">左侧勾选 →「复制已选 zed」→ 终端粘贴</span></div>
+<div id="path-rows"></div>
+</div>
+</div>
+
+<!-- Todo -->
+<div class="part-div"><span>Todo · 待办与倒计时</span></div>
+<div class="todo-panel" id="todo-panel">
+  <div class="todo-hd">
+    <span class="tag">Todo</span>
+    <span class="nm">创建代办 · 打勾 · 任务倒计时</span>
+  </div>
+  <div class="todo-clock is-idle" id="todo-clock">
+    <div class="clk-label">当前任务倒计时</div>
+    <div class="clk-time" id="todo-clock-time">--:--</div>
+    <div class="clk-task" id="todo-clock-task">暂无进行中的任务</div>
+  </div>
+  <form class="todo-form" id="todo-form">
+    <input type="text" id="todo-input" placeholder="写下待办…" autocomplete="off" required>
+    <input type="number" id="todo-mins" min="1" max="999" placeholder="分钟" title="倒计时分钟数">
+    <button type="submit">添加</button>
+  </form>
+  <div class="todo-list" id="todo-list"></div>
+</div>
+
+<!-- Header -->
+<div class="part-div"><span>Part 1 · 实战笔记</span></div>
+<div class="hd">
+<h1>R2芯片智能体实战笔记 ｜ 23篇课程地图</h1>
+<div class="sub">执行者 &rarr; 跑通 &rarr; 认知 &rarr; 进阶 &rarr; 刷loop &rarr; 进化 &rarr; 编排者</div>
+<div class="stats">
+<span class="st"><b>23</b> 篇</span>
+<span class="st"><b>5</b> 模块</span>
+<span class="st">执行者 &rarr; 编排者</span>
+</div>
+</div>
+
+<!-- 动词曲线 -->
+<div class="vc">
+<div class="vc-row">
+<span class="vc-end exec">执行者</span>
+<span class="vc-arrow">&rarr;</span>
+<span class="vc-node"><span class="vc-v" style="background:#534AB7">跑通</span><span class="vc-m">M1</span></span>
+<span class="vc-arrow">&rarr;</span>
+<span class="vc-node"><span class="vc-v" style="background:#185FA5">认知</span><span class="vc-m">M2</span></span>
+<span class="vc-arrow">&rarr;</span>
+<span class="vc-node"><span class="vc-v" style="background:#0F6E56">进阶</span><span class="vc-m">M3</span></span>
+<span class="vc-arrow">&rarr;</span>
+<span class="vc-node"><span class="vc-v" style="background:#854F0B">刷loop</span><span class="vc-m">M4</span></span>
+<span class="vc-arrow">&rarr;</span>
+<span class="vc-node"><span class="vc-v" style="background:#3B6D11">进化</span><span class="vc-m">M5</span></span>
+<span class="vc-arrow">&rarr;</span>
+<span class="vc-end orch">编排者</span>
+</div>
+<div class="vc-legend">
+<span><span class="dot" style="background:#534AB7"></span>M1 先立 OS 图景（1314520），再跑通第一个交付</span>
+<span><span class="dot" style="background:#185FA5"></span>M2 理解为什么：选型、差距、协作模式</span>
+<span><span class="dot" style="background:#0F6E56"></span>M3 从执行者进阶为指挥者</span>
+<span><span class="dot" style="background:#854F0B"></span>M4 刷 loop：串 AI 流水线跑起来</span>
+<span><span class="dot" style="background:#3B6D11"></span>M5 执行者进化为编排者</span>
+</div>
+</div>
+
+<!-- M1 跑通 6篇 -->
+<div class="mod m1">
+<div class="mh"><span class="tag" style="background:#534AB7">M1</span><span class="nm">跑通</span><span class="cnt">5篇</span></div>
+<div class="arts">
+<div class="art"><span class="n">01</span><div><div class="tt">R2-AIOS：借鉴秦的法/术/势，编译 IC 研发操作系统</div></div></div>
+<div class="art"><span class="n">02</span><div><div class="tt">5 分钟快速上手，交付一个可工作的 UART</div></div></div>
+<div class="art"><span class="n">03</span><div><div class="tt">8h+一杯奶茶钱，从0到1开发一个商用EDA的平替</div></div></div>
+<div class="art"><span class="n">04</span><div><div class="tt">24h 交付一个工业级IP，跑通基础功能验证</div></div></div>
+<div class="art"><span class="n">05</span><div><div class="tt">24h 交付一个工业级IP，跑通PPA优化</div></div></div>
+</div>
+</div>
+<div class="fa">&darr;</div>
+
+<!-- M2 认知 5篇 -->
+<div class="mod m2">
+<div class="mh"><span class="tag" style="background:#185FA5">M2</span><span class="nm">认知</span><span class="cnt">5篇</span></div>
+<div class="arts">
+<div class="art"><span class="n">06</span><div><div class="tt">R2推荐的模型，工具及场景配置组合</div></div></div>
+<div class="art"><span class="n">07</span><div><div class="tt">AI 写 RTL 快 100 倍，经验贬值还是变资产？</div></div></div>
+<div class="art"><span class="n">08</span><div><div class="tt">小模型和方法论的黄金时代，附多场景案例</div></div></div>
+<div class="art"><span class="n">09</span><div><div class="tt">提示词加餐包（复制即用·不讲课）</div></div></div>
+<div class="art"><span class="n">10</span><div><div class="tt">Thin Harness, Fat Skill，Thin Skill，Fat Knowledge</div></div></div>
+</div>
+</div>
+<div class="fa">&darr;</div>
+
+<!-- M3 进阶 4篇 -->
+<div class="mod m3">
+<div class="mh"><span class="tag" style="background:#0F6E56">M3</span><span class="nm">进阶</span><span class="cnt">4篇</span></div>
+<div class="arts">
+<div class="art"><span class="n">11</span><div><div class="tt">Debug 占 40% 时间，智能体时代会变怎样？</div></div></div>
+<div class="art"><span class="n">12</span><div><div class="tt">一个人盯 Claude Code 同时做三个 IP，经验与踩坑</div></div></div>
+<div class="art"><span class="n">13</span><div><div class="tt">EDA 流程与 AI 工作流的集成，打造你的专属 AI 专家团</div></div></div>
+<div class="art"><span class="n">14</span><div><div class="tt">Claude Code + git最强三板斧：Worktree + CLAUDE.md + 全闭环 Agentic 工作流</div></div></div>
+</div>
+</div>
+<div class="fa">&darr;</div>
+
+<!-- M4 刷loop 6篇 -->
+<div class="mod m4">
+<div class="mh"><span class="tag" style="background:#854F0B">M4</span><span class="nm">刷loop</span><span class="cnt">6篇</span></div>
+<div class="arts">
+<div class="art"><span class="n">15</span><div><div class="tt">循环工程时代的提示词基本功</div></div></div>
+<div class="art"><span class="n">16</span><div><div class="tt">AI 工作流搭建：让 AI 帮你搭建、优化、蒸馏 harness</div></div></div>
+<div class="art"><span class="n">17</span><div><div class="tt">选对 Loop，用好 Agent：芯片工程师的 AI 循环实战指南</div></div></div>
+<div class="art"><span class="n">18</span><div><div class="tt">知识库越多越慢越傻？给智能体用的知识库，怎么做？</div></div></div>
+<div class="art"><span class="n">19</span><div><div class="tt">团队经验：是进化的 Skill 系统，还是僵尸 md 文档？</div></div></div>
+<div class="art"><span class="n">20</span><div><div class="tt">为何 harness 的保质期只有 90 天，skill 的保鲜期只有 60 天</div></div></div>
+</div>
+</div>
+<div class="fa">&darr;</div>
+
+<!-- M5 进化 4篇 -->
+<div class="mod m5">
+<div class="mh"><span class="tag" style="background:#3B6D11">M5</span><span class="nm">进化</span><span class="cnt">3篇</span></div>
+<div class="arts">
+<div class="art"><span class="n">21</span><div><div class="tt">高估了模型，低估了脚手架：自我进化的驾驭工程</div></div></div>
+<div class="art"><span class="n">22</span><div><div class="tt">从 Skill 收藏家到 Skill 进化论</div></div></div>
+<div class="art"><span class="n">23</span><div><div class="tt">Skill 是便利贴，系统组织才是 IP：为什么skill 用了没效果</div></div></div>
+</div>
+</div>
+
+<!-- Part 2: R2-AIOS -->
+
+<!-- 路径总览 Part2 -->
+<div class="pwrap" id="path-wrap2">
+<div class="ppanel">
+<div class="pphd"><span class="tag" style="background:#2C2C2A">路径</span><span class="nm">Part2 全文路径一览</span></div>
+<div id="path-rows2"></div>
+</div>
+</div>
+
+<div class="part-div"><span>Part 2 · R2-AIOS</span></div>
+
+<div id="part-aios">
+
+<div class="hd">
+<h1>R2-AIOS 芯片智能体操作系统</h1>
+<div class="sub">把芯片研发编译成可签核的智能产线</div>
+<div class="sub" style="margin-top:2px">1314520 &rarr; R2-Arch &rarr; R2-Verismart-AIOS &rarr; R2-ProductSmart</div>
+<div class="stats">
+<span class="st"><b>25</b> 项</span>
+<span class="st"><b>4</b> 模块</span>
+<span class="st">可反馈 · 可验证 · 可复用 · 可签核</span>
+</div>
+</div>
+
+<div class="slogan-bar">让 AI 执行，让机器裁判，让人签核</div>
+
+<div class="vc">
+<div class="vc-row">
+<span class="vc-end exec">1314520</span>
+<span class="vc-arrow">&rarr;</span>
+<span class="vc-node"><span class="vc-v" style="background:#534AB7">R2-AIOS</span><span class="vc-m">P1</span></span>
+<span class="vc-arrow">&rarr;</span>
+<span class="vc-node"><span class="vc-v" style="background:#185FA5">R2-Arch</span><span class="vc-m">P2</span></span>
+<span class="vc-arrow">&rarr;</span>
+<span class="vc-node"><span class="vc-v" style="background:#0F6E56">Verismart</span><span class="vc-m">P3</span></span>
+<span class="vc-arrow">&rarr;</span>
+<span class="vc-node"><span class="vc-v" style="background:#854F0B">ProductSmart</span><span class="vc-m">P4</span></span>
+<span class="vc-arrow">&rarr;</span>
+<span class="vc-end orch">智能产线</span>
+</div>
+<div class="vc-legend">
+<span><span class="dot" style="background:#534AB7"></span>P1 操作系统底座：1314520 + 八子系统</span>
+<span><span class="dot" style="background:#185FA5"></span>P2 敏捷架构：三刀法 + IP 集成 + topgen</span>
+<span><span class="dot" style="background:#0F6E56"></span>P3 敏捷验证：VPlan + 覆盖率 + Debug 闭环</span>
+<span><span class="dot" style="background:#854F0B"></span>P4 产品决策：芯片 PM 框架与 Sprint 校准</span>
+</div>
+</div>
+
+<!-- P1 R2-AIOS-1314520 9项 -->
+<div class="mod m1">
+<div class="mh"><span class="tag" style="background:#534AB7">P1</span><span class="nm">R2-AIOS-1314520</span><span class="cnt">8项</span></div>
+<div class="arts">
+<div class="art"><span class="n">01</span><div><div class="tt">芯片工程师使用 AI 的 3 个痛点和 3 个误区</div></div></div>
+<div class="art"><span class="n">02</span><div><div class="tt">R2-AIOS：借鉴秦的法/术/势，编译 IC 研发操作系统</div></div></div>
+<div class="art"><span class="n">03</span><div><div class="tt">r2-specx：给 pdf spec 装上编译引擎，机器可读驱动交付闭环</div></div></div>
+<div class="art"><span class="n">04</span><div><div class="tt">r2-loop：从避免失败到利用失败，循环工程的记忆飞轮与组织进化</div></div></div>
+<div class="art"><span class="n">05</span><div><div class="tt">r2-skill：你的 Skill 是便利贴还是 IP，帮团队将经验资产化</div></div></div>
+<div class="art"><span class="n">06</span><div><div class="tt">r2-eda：20 类定制EDA及cli，为智能引擎提供确定底座</div></div></div>
+<div class="art"><span class="n">07</span><div><div class="tt">r2-knowledge：决策飞轮，构建人和 Agent 都能消费的轻量知识库</div></div></div>
+<div class="art"><span class="n">08</span><div><div class="tt">r2-4role：Peter 设目标，Andy 做设计，Vicky 当裁判，Fred 建产线</div></div></div>
+</div>
+</div>
+<div class="fa">&darr;</div>
+
+<!-- P2 R2-Arch 7项 -->
+<div class="mod m2">
+<div class="mh"><span class="tag" style="background:#185FA5">P2</span><span class="nm">R2-Arch 敏捷架构探索</span><span class="cnt">7项</span></div>
+<div class="arts">
+<div class="art"><span class="n">10</span><div><div class="tt">r2-harness：效率来自反馈，持续交付可工作的内容</div></div></div>
+<div class="art"><span class="n">11</span><div><div class="tt">r2-3way：三刀法，以语言为刀，最小化试错成本</div></div></div>
+<div class="art"><span class="n">12</span><div><div class="tt">r2-ip：集成一颗 IP 进 SoC，结构是因，复用是果</div></div></div>
+<div class="art"><span class="n">13</span><div><div class="tt">r2-arch：架构探索九步收敛，编译持续交付的芯片产线</div></div></div>
+<div class="art"><span class="n">14</span><div><div class="tt">r2-cbbrtl：RTL 从能不能写到敢不敢用，CBB 标注四维映射</div></div></div>
+<div class="art"><span class="n">15</span><div><div class="tt">r2-c2rtl：错题驱动迭代，编译可信赖的 Verilog</div></div></div>
+<div class="art"><span class="n">16</span><div><div class="tt">r2-soc-integration：可定制的SOC开放集成平台</div></div></div>
+</div>
+</div>
+<div class="fa">&darr;</div>
+
+<!-- P3 R2-Verismart-AIOS 5项 -->
+<div class="mod m3">
+<div class="mh"><span class="tag" style="background:#0F6E56">P3</span><span class="nm">R2-Verismart-AIOS 敏捷验证流水线</span><span class="cnt">5项</span></div>
+<div class="arts">
+<div class="art"><span class="n">17</span><div><div class="tt">r2-vplan：人和智能体都觉得好用的 VPlan，从怎么验到验什么</div></div></div>
+<div class="art"><span class="n">18</span><div><div class="tt">r2-cov：都江堰模型，为什么说约束是自适应的引擎</div></div></div>
+<div class="art"><span class="n">19</span><div><div class="tt">r2-debug：八段闭环驱动负反馈，让出错回流预防</div></div></div>
+<div class="art"><span class="n">20</span><div><div class="tt">R2-Verismart-AIOS：以 DUT 为中心的验证流水线</div></div></div>
+<div class="art"><span class="n">21</span><div><div class="tt">r2-dvbuild：响应式柔性验证流水线（PCIVAR）</div></div></div>
+</div>
+</div>
+<div class="fa">&darr;</div>
+
+<!-- P4 R2-ProductSmart 5项 -->
+<div class="mod m4">
+<div class="mh"><span class="tag" style="background:#854F0B">P4</span><span class="nm">R2-ProductSmart 芯片产品经理框架</span><span class="cnt">5项</span></div>
+<div class="arts">
+<div class="art"><span class="n">22</span><div><div class="tt">r2-chip-pm：人定方向，AI 算路径——芯片产品经理的决策法则</div></div></div>
+<div class="art"><span class="n">23</span><div><div class="tt">r2-chip-pm：选战场、定代际差、裁指标——产品经理的三个决策时刻</div></div></div>
+<div class="art"><span class="n">24</span><div><div class="tt">r2-chip-pm：从需求到价值：四步厘清，编译可签核的决策输入</div></div></div>
+<div class="art"><span class="n">25</span><div><div class="tt">r2-chip-pm：七层洋葱全覆盖：从企业战略到每日，产品决策链路</div></div></div>
+<div class="art"><span class="n">26</span><div><div class="tt">r2-chip-pm：一轮 Sprint 一轮校准，持续驱动产品演进</div></div></div>
+</div>
+</div>
+<div class="fa">&darr;</div>
+
+<!-- 1314520 解码 6条 -->
+<div class="mod m5">
+<div class="mh"><span class="tag" style="background:#3B6D11">解码</span><span class="nm">1314520</span><span class="cnt">6条</span></div>
+<div class="arts">
+<div class="art"><span class="n">1</span><div><div class="tt">一个统一：Spec &rarr; SSoT，六条产线同源</div></div></div>
+<div class="art"><span class="n">3</span><div><div class="tt">三刀法：隔离爆炸半径，短闭环降反馈代价，发布火车载节奏</div></div></div>
+<div class="art"><span class="n">11</span><div><div class="tt">十一类 Skills：原子能力组合成产线</div></div></div>
+<div class="art"><span class="n">4</span><div><div class="tt">四角色：产品 / 架构 / 验证 / 流程，互相制衡</div></div></div>
+<div class="art"><span class="n">5</span><div><div class="tt">五条主线：从探索到进化的工作流规则</div></div></div>
+<div class="art"><span class="n">20</span><div><div class="tt">二十个 R2-EDA：确定性 syscall，覆盖 Spec &rarr; RTL &rarr; 验证 &rarr; 调试</div></div></div>
+</div>
+</div>
+
+<div class="ft">R2-AIOS 把芯片研发编译成可反馈、可验证、可复用、可签核的工作流体系。<b>R2 芯片智能体</b></div>
+
+</div>
+
+</div>
+<script>
+(function(){
+  var KEY='r2-course-map-checks';
+  var saved={};
+  try{saved=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+  Object.keys(saved).forEach(function(k){
+    if(!/^notes-/.test(k)&&!/^aios-/.test(k)&&/^\d+-[123]$/.test(k)){
+      saved['notes-'+k]=saved[k];delete saved[k];
+    }
+  });
+  /* 默认勾选：根据截图还原 v2 当前状态（2026-07-11）
+     仅填充 localStorage 中尚未设置的键，不覆盖用户已手动勾选
+     注：*-1 已改为打分输入框，不再设 checkbox 默认 */
+  var DEFAULTS={
+    /* Part 1 · 实战笔记（仅 2/3 勾选位；1 为分数） */
+    /* Part 2 · R2-AIOS：不设默认勾选，保持清空 */
+  };
+  var merged=false;
+  Object.keys(DEFAULTS).forEach(function(k){
+    if(saved[k]===undefined){saved[k]=DEFAULTS[k];merged=true;}
+  });
+  /* 一次性写入 Part2 01–21 的 md 路径 + 文件最后变更时间 */
+  var AIOS_PATHS_SEED='r2-course-map-aios-paths-20260718-v3';
+  if(!localStorage.getItem(AIOS_PATHS_SEED)){
+    var AIOS_PATHS={
+      '01':{time:'2026-06-18 05:14',md:'/Users/gaoyuan/Desktop/r2-video/648-33.md'},
+      '02':{time:'2026-07-15 00:58',md:'/Users/gaoyuan/Desktop/r2-video/780-aios.md'},
+      '03':{time:'2026-06-21 04:05',md:'/Users/gaoyuan/Desktop/r2-video/664-编译引擎.md'},
+      '04':{time:'2026-06-17 01:19',md:'/Users/gaoyuan/Desktop/r2-video/689.md'},
+      '05':{time:'2026-06-22 07:04',md:'/Users/gaoyuan/Desktop/r2-video/786-skill.md'},
+      '08':{time:'2026-06-26 07:13',md:'/Users/gaoyuan/Desktop/r2-video/813-4role.md'},
+      '10':{time:'2026-07-15 08:57',md:'/Users/gaoyuan/Desktop/r2-video/185-r2-harness.md'},
+      '11':{time:'2026-07-14 14:29',md:'/Users/gaoyuan/Desktop/r2-video/679-3way.md'},
+      '12':{time:'2026-07-14 15:09',md:'/Users/gaoyuan/Desktop/r2-video/747-r2-ip.md'},
+      '13':{time:'2026-07-15 02:49',md:'/Users/gaoyuan/Desktop/r2-video/13-r2-arch.md'},
+      '14':{time:'2026-07-08 02:10',md:'/Users/gaoyuan/Desktop/r2-video/932-96-r2-cbbrtl：让 Agent 看懂存量 RTL 代码库中的 CBB.md'},
+      '15':{time:'2026-07-14 17:50',md:'/Users/gaoyuan/Desktop/r2-video/69-c2rtl.md'},
+      '16':{time:'2026-07-15 08:12',md:'/Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/68-r2-soc-integration：可定制的SOC开放集成平台.md'},
+      '17':{time:'2026-07-15 04:58',md:'/Users/gaoyuan/Desktop/r2-video/829-r2-vplan.md'},
+      '18':{time:'2026-07-01 09:00',md:'/Users/gaoyuan/Desktop/r2-video/666-cov.md'},
+      '19':{time:'2026-07-15 00:26',md:'/Users/gaoyuan/Desktop/r2-video/846-r2-debug.md'},
+      '20':{time:'2026-07-15 11:41',md:'/Users/gaoyuan/Desktop/r2-video/805-r2-verismart.md'}
+    };
+    Object.keys(AIOS_PATHS).forEach(function(id){
+      saved['aios-'+id+'-time']=AIOS_PATHS[id].time;
+      saved['aios-'+id+'-md']=AIOS_PATHS[id].md;
+      merged=true;
+    });
+    localStorage.setItem(AIOS_PATHS_SEED,'1');
+  }
+  /* 一次性注册 Part2 16 号 r2-soc-integration（68.md），2026-07-17 */
+  var AIOS_PATH16_SEED='r2-course-map-aios-path16-20260717';
+  if(!localStorage.getItem(AIOS_PATH16_SEED)){
+    saved['aios-16-time']='2026-07-15 08:12';
+    saved['aios-16-md']='/Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/68-r2-soc-integration：可定制的SOC开放集成平台.md';
+    merged=true;
+    localStorage.setItem(AIOS_PATH16_SEED,'1');
+  }
+  /* 强制：Part1 全部路径统一写入 2026-07-18 */
+  var NOTES_ALL_SEED='r2-course-map-notes-all-paths-20260718-v1';
+  if(!localStorage.getItem(NOTES_ALL_SEED)){
+    var R='/Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/';
+    var ALL_NOTES={
+      /* M1 */
+      '01':{time:'2026-07-15 00:58',md:'/Users/gaoyuan/Desktop/r2-video/780-aios.md'},
+      '02':{time:'2026-07-14 05:04',md:R+'52-5 分钟快速上手，交付一个可工作的 UART.md'},
+      '03':{time:'2026-07-18 14:24',md:R+'68-8h+一杯奶茶钱，从0到1开发一个商用EDA的平替.md'},
+      '04':{time:'2026-07-16 13:23',md:R+'80-24h 交付一个工业级IP，跑通基础功能验证 1.md'},
+      '05':{time:'2026-07-16 16:28',md:R+'79-24h 交付一个工业级IP，跑通PPA优化 1.md'},
+      /* M2 */
+      '06':{time:'2026-07-13 17:00',md:R+'01-R2推荐的模型工具及场景配置组合.md'},
+      '07':{time:'2026-07-09 06:33',md:R+'2-你站在蒸馏的哪一端——AI时代人的价值往哪里退.md'},
+      '08':{time:'2026-07-14 00:33',md:R+'44-小模型和方法论的黄金时代，附多场景案例 定稿.md'},
+      '09':{time:'2026-07-18 15:30',md:'/Users/gaoyuan/Desktop/r2-connect/提示词加餐包-复制即用.md'},
+      '10':{time:'2026-07-14 02:18',md:R+'48-Thin Harness, Fat Skill; Thin Skill, Fat Knowledge.md'},
+      /* M3 */
+      '11':{time:'2026-07-14 07:27',md:R+'50-Debug 占 40% 时间，智能体时代会变怎样？.md'},
+      '12':{time:'2026-07-14 07:15',md:R+'56-一个人盯 Claude Code 同时做三个 IP —— 经验与踩坑.md'},
+      '13':{time:'2026-07-17 10:55',md:R+'84-EDA 流程与 AI 工作流的集成，打造你的专属 AI 专家团.md'},
+      '14':{time:'2026-07-17 05:24',md:R+'82-Claude Code + git最强三板斧：Worktree  + CLAUDE.md  + 全闭环 Agentic 工作流.md'},
+      /* M4 */
+      '15':{time:'2026-07-17 05:52',md:R+'83-循环工程时代的提示词基本功.md'},
+      '16':{time:'2026-07-14 07:41',md:R+'57-AI 工作流搭建 — 让 AI 帮你搭建、优化、蒸馏 Harness.md'},
+      '17':{time:'2026-07-13 20:15',md:R+'45-选对 Loop，用好 Agent：芯片工程师的 AI 循环实战指南.md'},
+      '18':{time:'2026-07-14 06:17',md:R+'55-知识库越多越慢越傻？给智能体用的知识库，怎么做？.md'},
+      '19':{time:'2026-07-14 05:24',md:R+'29-Skill 是便利贴，组织方式才是 IP.md'},
+      '20':{time:'2026-07-14 07:39',md:R+'49-为何 harness 的保质期只有 90 天，skill 的保鲜期只有 60 天 1定稿.md'},
+      /* M5 */
+      '21':{time:'2026-07-14 06:03',md:R+'53-高估了模型，低估了脚手架：自我进化的驾驭工程.md'},
+      '22':{time:'2026-07-14 05:24',md:R+'29-Skill 是便利贴，组织方式才是 IP.md'},
+      '23':{time:'2026-07-14 05:24',md:R+'29-Skill 是便利贴，组织方式才是 IP.md'}
+    };
+    Object.keys(ALL_NOTES).forEach(function(id){
+      saved['notes-'+id+'-time']=ALL_NOTES[id].time;
+      saved['notes-'+id+'-md']=ALL_NOTES[id].md;
+      merged=true;
+    });
+    /* Part2 extra paths not in AIOS_PATHS */
+    saved['aios-06-md']=R+'72-r2-eda：20 类定制EDA及cli，为智能引擎提供确定底座.md';
+    saved['aios-06-time']='2026-07-15 16:26';
+    saved['aios-07-md']=R+'55-r2-knowledge：决策飞轮，构建人和 Agent 都能消费的轻量知识库.md';
+    saved['aios-07-time']='2026-07-14 13:29';
+    saved['aios-21-md']=R+'87-r2-dvbuild：响应式柔性验证流水线.md';
+    saved['aios-21-time']='2026-07-17 17:09';
+    merged=true;
+    localStorage.setItem(NOTES_ALL_SEED,'1');
+  }
+  /* 一次性：*-1 从旧 checkbox boolean 迁成打分空字段 */
+  var SCORE1_MIG='r2-course-map-score1-20260716';
+  if(!localStorage.getItem(SCORE1_MIG)){
+    Object.keys(saved).forEach(function(k){
+      if(/^(notes|aios)-.+-1$/.test(k) && typeof saved[k]==='boolean'){
+        delete saved[k];merged=true;
+      }
+    });
+    localStorage.setItem(SCORE1_MIG,'1');
+  }
+  /* 一次性清空 Part 2 · R2-AIOS 全部 checkbox（含历史 localStorage） */
+  var AIOS_CLEARED='r2-course-map-aios-cleared-20260716';
+  if(!localStorage.getItem(AIOS_CLEARED)){
+    Object.keys(saved).forEach(function(k){
+      if(/^aios-.+-[123]$/.test(k)){delete saved[k];merged=true;}
+    });
+    localStorage.setItem(AIOS_CLEARED,'1');
+  }
+  if(merged){localStorage.setItem(KEY,JSON.stringify(saved));}
+
+  /* 每个模块标题行下加 1-2-3 图例（只加一次） */
+  document.querySelectorAll('.mod .mh').forEach(function(mh){
+    var leg=document.createElement('div');
+    leg.className='art-checks-legend';
+    leg.innerHTML='打分 <b>1</b> 定稿，进r2-video <b>2</b> 上小鹅通 <b>3</b>';
+    mh.insertAdjacentElement('afterend', leg);
+  });
+
+  document.querySelectorAll('.art').forEach(function(art){
+    var section=art.closest('#part-aios')?'aios':'notes';
+    var id=art.querySelector('.n').textContent.trim();
+    var box=document.createElement('div');
+    box.className='art-checks';
+    var titles=['打分','定稿，进r2-video','上小鹅通'];
+    for(var i=1;i<=3;i++){
+      var lab=document.createElement('label');
+      lab.className='ck';
+      lab.title=titles[i-1];
+      var num=document.createElement('span');
+      num.textContent=String(i);
+      var k=section+'-'+id+'-'+i;
+      var ctrl;
+      if(i===1){
+        ctrl=document.createElement('input');
+        ctrl.type='text';
+        ctrl.className='art-score';
+        ctrl.inputMode='decimal';
+        ctrl.placeholder='—';
+        ctrl.dataset.section=section;
+        ctrl.dataset.lesson=id;
+        ctrl.dataset.cp='1';
+        var sv=saved[k];
+        ctrl.value=(sv===undefined||sv===null||typeof sv==='boolean')?'':String(sv);
+        ctrl.addEventListener('input',function(){
+          var v=this.value.trim();
+          saved[this.dataset.section+'-'+this.dataset.lesson+'-1']=v;
+          localStorage.setItem(KEY,JSON.stringify(saved));
+        });
+      }else{
+        ctrl=document.createElement('input');
+        ctrl.type='checkbox';
+        ctrl.dataset.section=section;
+        ctrl.dataset.lesson=id;
+        ctrl.dataset.cp=String(i);
+        ctrl.checked=!!saved[k];
+        ctrl.addEventListener('change',function(){
+          saved[this.dataset.section+'-'+this.dataset.lesson+'-'+this.dataset.cp]=this.checked;
+          localStorage.setItem(KEY,JSON.stringify(saved));
+        });
+      }
+      lab.appendChild(num);
+      lab.appendChild(ctrl);
+      box.appendChild(lab);
+    }
+    art.appendChild(box);
+    /* 旧版单 path 字段迁入 md */
+    var oldPk=section+'-'+id+'-path';
+    if(saved[oldPk] && saved[section+'-'+id+'-md']===undefined){
+      saved[section+'-'+id+'-md']=saved[oldPk];
+      localStorage.setItem(KEY,JSON.stringify(saved));
+    }
+  });
+  /* Part1 实战笔记无 mp4：notes-*-mp4 迁到 notes-*-html（一次性） */
+  var NOTES_HTML_MIG='r2-course-map-notes-mp4-to-html-20260718';
+  if(!localStorage.getItem(NOTES_HTML_MIG)){
+    Object.keys(saved).forEach(function(k){
+      var m=k.match(/^notes-(.+)-mp4$/);
+      if(!m)return;
+      var htmlK='notes-'+m[1]+'-html';
+      if(saved[k] && (saved[htmlK]===undefined||saved[htmlK]==='')){
+        saved[htmlK]=saved[k];
+      }
+      delete saved[k];
+      merged=true;
+    });
+    localStorage.setItem(NOTES_HTML_MIG,'1');
+  }
+  if(merged){localStorage.setItem(KEY,JSON.stringify(saved));}
+
+  /* 路径总览面板渲染 */
+  (function renderPaths(){
+    /* notes：md 或 html；aios：md 或 mp4 → 绿；否则橙 */
+    function mediaKey(pkBase){
+      return pkBase.indexOf('notes-')===0?'html':'mp4';
+    }
+    function tagColor(pkBase){
+      var md=(saved[pkBase+'-md']||'').trim();
+      var media=(saved[pkBase+'-'+mediaKey(pkBase)]||'').trim();
+      return (md||media)?'#3B6D11':'#E8501F';
+    }
+    var rowsEl=document.getElementById('path-rows');
+    if(!rowsEl)return;
+    var html='';
+    document.querySelectorAll('.mod').forEach(function(mod){
+      var mh=mod.querySelector('.mh .tag');
+      var modName=mh?mh.textContent.trim():'';
+      mod.querySelectorAll('.art').forEach(function(art){
+        var n=art.querySelector('.n').textContent.trim();
+        var section=art.closest('#part-aios')?'aios':'notes';
+        var pkBase=section+'-'+n;
+        var mk=mediaKey(pkBase);
+        var color=tagColor(pkBase);
+        var ttl=art.querySelector('.tt').textContent.trim();
+        var mdVal=(saved[pkBase+'-md']||'');
+        var timeVal=(saved[pkBase+'-time']||'');
+        var mediaVal=(saved[pkBase+'-'+mk]||'');
+        var mediaLabel=mk;
+        var mediaPh=mk==='html'?'粘贴 .html 全路径…（本系列无 mp4）':'粘贴 .mp4 全路径…';
+        var picked=!!saved[pkBase+'-zedpick'];
+        html+='<div class="pgroup'+(picked?' is-picked':'')+'" data-pkbase="'+pkBase+'">'+
+      '<div class="pg-hd">'+
+      '<input type="checkbox" class="pg-pick" data-pick="'+pkBase+'" title="纳入 zed 多开" '+(picked?'checked':'')+'>'+
+      '<span class="pn">'+n+'</span><span class="pmod" data-tagfor="'+pkBase+'" style="background:'+color+'">'+modName+'</span><span class="pttl">'+ttl+'</span></div>'+
+      '<div class="pg-row"><label>时间</label><input data-pk="'+pkBase+'-time" value="'+timeVal.replace(/"/g,'&quot;')+'" placeholder="如 12:30"></div>'+
+      '<div class="pg-row"><label>md</label><input data-pk="'+pkBase+'-md" value="'+mdVal.replace(/"/g,'&quot;')+'" placeholder="粘贴 .md 全路径…"></div>'+
+      '<div class="pg-row"><label>'+mediaLabel+'</label><input data-pk="'+pkBase+'-'+mk+'" value="'+mediaVal.replace(/"/g,'&quot;')+'" placeholder="'+mediaPh+'"></div>'+
+      '</div>';
+      });
+    });
+    rowsEl.innerHTML=html;
+    rowsEl.addEventListener('input',function(e){
+      if(e.target.tagName==='INPUT' && e.target.dataset.pk){
+        saved[e.target.dataset.pk]=e.target.value;
+        localStorage.setItem(KEY,JSON.stringify(saved));
+        /* 路径变动时实时切换标签颜色 */
+        var base=e.target.dataset.pk.replace(/-(time|md|mp4|html)$/,'');
+        var tag=rowsEl.querySelector('.pmod[data-tagfor="'+base+'"]');
+        if(tag){tag.style.background=tagColor(base);}
+      }
+    });
+    rowsEl.addEventListener('change',function(e){
+      if(e.target.classList.contains('pg-pick')){
+        var base=e.target.dataset.pick;
+        saved[base+'-zedpick']=e.target.checked;
+        localStorage.setItem(KEY,JSON.stringify(saved));
+        var g=e.target.closest('.pgroup');
+        if(g)g.classList.toggle('is-picked',e.target.checked);
+      }
+    });
+  })();
+  /* 复制 zed：仅「已勾选 + 有 md」——意图是子集多开，不是全库倾倒 */
+  function shellQuote(s){
+    return "'"+String(s).replace(/'/g,"'\\''")+"'";
+  }
+  function collectSelectedMdPaths(){
+    var list=[], seen={};
+    document.querySelectorAll('.pgroup').forEach(function(g){
+      var pick=g.querySelector('.pg-pick');
+      if(!pick||!pick.checked)return;
+      var mdInp=g.querySelector('input[data-pk$="-md"]');
+      var v=mdInp?(mdInp.value||'').trim():'';
+      if(!v||!/\.md$/i.test(v))return;
+      if(seen[v])return;
+      seen[v]=1;list.push(v);
+    });
+    return list;
+  }
+  function copyText(text){
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      return navigator.clipboard.writeText(text);
+    }
+    return new Promise(function(resolve,reject){
+      var ta=document.createElement('textarea');
+      ta.value=text;ta.style.position='fixed';ta.style.left='-9999px';
+      document.body.appendChild(ta);ta.select();
+      try{document.execCommand('copy');resolve();}
+      catch(e){reject(e);}
+      document.body.removeChild(ta);
+    });
+  }
+  function flashBtn(btn,msg,restore,ms){
+    if(!btn)return;
+    var old=restore||btn.textContent;
+    btn.textContent=msg;
+    setTimeout(function(){btn.textContent=old;},ms||1600);
+  }
+  var btnZed=document.getElementById('btn-copy-zed');
+  if(btnZed){
+    btnZed.addEventListener('click',function(){
+      var mds=collectSelectedMdPaths();
+      if(!mds.length){
+        flashBtn(btnZed,'先勾选有 md 的课','复制已选 zed');
+        return;
+      }
+      var cmd='zed '+mds.map(shellQuote).join(' ');
+      copyText(cmd).then(function(){
+        flashBtn(btnZed,'已复制 '+mds.length+' 个','复制已选 zed');
+      }).catch(function(){
+        window.prompt('复制失败，请手动复制：',cmd);
+      });
+    });
+  }
+  var btnPickHas=document.getElementById('btn-pick-has-md');
+  if(btnPickHas){
+    btnPickHas.addEventListener('click',function(){
+      var n=0;
+      document.querySelectorAll('.pgroup').forEach(function(g){
+        var mdInp=g.querySelector('input[data-pk$="-md"]');
+        var pick=g.querySelector('.pg-pick');
+        var base=g.dataset.pkbase;
+        var has=mdInp&&/\.md$/i.test((mdInp.value||'').trim());
+        if(pick){
+          pick.checked=!!has;
+          if(has)n++;
+          if(base){saved[base+'-zedpick']=!!has;}
+          g.classList.toggle('is-picked',!!has);
+        }
+      });
+      localStorage.setItem(KEY,JSON.stringify(saved));
+      flashBtn(btnPickHas,'已勾 '+n,'勾选有 md');
+    });
+  }
+  var btnPickClear=document.getElementById('btn-pick-clear');
+  if(btnPickClear){
+    btnPickClear.addEventListener('click',function(){
+      document.querySelectorAll('.pgroup').forEach(function(g){
+        var pick=g.querySelector('.pg-pick');
+        var base=g.dataset.pkbase;
+        if(pick)pick.checked=false;
+        if(base)saved[base+'-zedpick']=false;
+        g.classList.remove('is-picked');
+      });
+      localStorage.setItem(KEY,JSON.stringify(saved));
+      flashBtn(btnPickClear,'已清空','清空勾选');
+    });
+  }
+  /* 导出/导入 */
+  var btnExport=document.getElementById('btn-export');
+  var btnImport=document.getElementById('btn-import');
+  var fileImport=document.getElementById('file-import');
+  if(btnExport){
+    btnExport.addEventListener('click',function(){
+      var checks={};
+      try{checks=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+      var todos=[];
+      try{todos=JSON.parse(localStorage.getItem('r2-course-map-todos')||'[]')}catch(e){}
+      var payload=JSON.stringify({checks:checks,todos:todos,_v:3});
+      var blob=new Blob([payload],{type:'application/json'});
+      var url=URL.createObjectURL(blob);
+      var a=document.createElement('a');
+      a.href=url;
+      a.download='r2-course-map-'+new Date().toISOString().slice(0,10)+'.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  }
+  if(btnImport){
+    btnImport.addEventListener('click',function(){fileImport.click();});
+  }
+  if(fileImport){
+    fileImport.addEventListener('change',function(e){
+      var file=e.target.files[0];
+      if(!file)return;
+      var reader=new FileReader();
+      reader.onload=function(ev){
+        try{
+          var imported=JSON.parse(ev.target.result);
+          var current={};
+          try{current=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+          /* 兼容旧版扁平 JSON，以及新版 {checks,todos} */
+          var checks=imported.checks||imported;
+          if(imported.checks||imported.todos){
+            Object.keys(checks).forEach(function(k){current[k]=checks[k];});
+            if(Array.isArray(imported.todos)){
+              localStorage.setItem('r2-course-map-todos',JSON.stringify(imported.todos));
+            }
+          }else{
+            Object.keys(imported).forEach(function(k){current[k]=imported[k];});
+          }
+          localStorage.setItem(KEY,JSON.stringify(current));
+          location.reload();
+        }catch(err){alert('导入失败：文件格式不正确');}
+      };
+      reader.readAsText(file);
+      fileImport.value='';
+    });
+  }
+})();
+
+/* Todo · 创建 / 打勾 / 倒计时 */
+(function(){
+  var TODO_KEY='r2-course-map-todos';
+  var todos=[];
+  try{todos=JSON.parse(localStorage.getItem(TODO_KEY)||'[]')}catch(e){todos=[]}
+  if(!Array.isArray(todos))todos=[];
+
+  var listEl=document.getElementById('todo-list');
+  var formEl=document.getElementById('todo-form');
+  var inputEl=document.getElementById('todo-input');
+  var minsEl=document.getElementById('todo-mins');
+  var clockEl=document.getElementById('todo-clock');
+  var clockTime=document.getElementById('todo-clock-time');
+  var clockTask=document.getElementById('todo-clock-task');
+  if(!listEl||!formEl)return;
+
+  function save(){localStorage.setItem(TODO_KEY,JSON.stringify(todos))}
+
+  function fmt(ms){
+    if(ms<0)ms=0;
+    var s=Math.floor(ms/1000);
+    var m=Math.floor(s/60);
+    s=s%60;
+    return (m<10?'0':'')+m+':'+(s<10?'0':'')+s;
+  }
+
+  function activeTodo(){
+    var now=Date.now();
+    var best=null;
+    todos.forEach(function(t){
+      if(t.done||!t.deadline)return;
+      if(!best||t.deadline<best.deadline)best=t;
+    });
+    return best;
+  }
+
+  function tick(){
+    var t=activeTodo();
+    clockEl.classList.remove('is-idle','is-over');
+    if(!t){
+      clockEl.classList.add('is-idle');
+      clockTime.textContent='--:--';
+      clockTask.textContent='暂无进行中的任务';
+      renderRemains();
+      return;
+    }
+    var left=t.deadline-Date.now();
+    if(left<=0){
+      clockEl.classList.add('is-over');
+      clockTime.textContent='00:00';
+      clockTask.textContent='时间到 · '+t.text;
+    }else{
+      clockTime.textContent=fmt(left);
+      clockTask.textContent=t.text+(t.mins?' · '+t.mins+' 分钟':'');
+    }
+    renderRemains();
+  }
+
+  function renderRemains(){
+    listEl.querySelectorAll('.todo-item').forEach(function(row){
+      var id=row.dataset.id;
+      var t=todos.find(function(x){return x.id===id});
+      var el=row.querySelector('.todo-remain');
+      if(!t||!el)return;
+      if(t.done||!t.deadline){
+        el.textContent=t&&t.mins?t.mins+'m':'—';
+        el.className='todo-remain idle';
+        return;
+      }
+      var left=t.deadline-Date.now();
+      if(left<=0){
+        el.textContent='超时';
+        el.className='todo-remain';
+      }else{
+        el.textContent=fmt(left);
+        el.className='todo-remain ok';
+      }
+    });
+  }
+
+  function render(){
+    listEl.innerHTML='';
+    if(!todos.length){
+      listEl.innerHTML='<div class="todo-empty">还没有待办，上面添加一条吧</div>';
+      tick();
+      return;
+    }
+    todos.forEach(function(t){
+      var row=document.createElement('div');
+      row.className='todo-item'+(t.done?' done':'');
+      row.dataset.id=t.id;
+
+      var cb=document.createElement('input');
+      cb.type='checkbox';
+      cb.checked=!!t.done;
+      cb.title='打勾完成';
+      cb.addEventListener('change',function(){
+        t.done=cb.checked;
+        if(t.done){t.deadline=null}
+        save();render();
+      });
+
+      var text=document.createElement('div');
+      text.className='todo-text';
+      text.textContent=t.text;
+
+      var remain=document.createElement('div');
+      remain.className='todo-remain idle';
+      remain.textContent=t.mins?t.mins+'m':'—';
+
+      var actions=document.createElement('div');
+      actions.className='todo-actions';
+
+      if(!t.done){
+        var btnStart=document.createElement('button');
+        btnStart.type='button';
+        btnStart.textContent=t.deadline?'重置':'开始';
+        btnStart.title='开始/重置倒计时';
+        btnStart.addEventListener('click',function(){
+          var m=t.mins||25;
+          t.mins=m;
+          t.deadline=Date.now()+m*60*1000;
+          save();render();
+        });
+        actions.appendChild(btnStart);
+      }
+
+      var btnDel=document.createElement('button');
+      btnDel.type='button';
+      btnDel.className='danger';
+      btnDel.textContent='删';
+      btnDel.addEventListener('click',function(){
+        todos=todos.filter(function(x){return x.id!==t.id});
+        save();render();
+      });
+      actions.appendChild(btnDel);
+
+      row.appendChild(cb);
+      row.appendChild(text);
+      row.appendChild(remain);
+      row.appendChild(actions);
+      listEl.appendChild(row);
+    });
+    tick();
+  }
+
+  formEl.addEventListener('submit',function(e){
+    e.preventDefault();
+    var text=(inputEl.value||'').trim();
+    if(!text)return;
+    var mins=parseInt(minsEl.value,10);
+    if(!(mins>0))mins=null;
+    var item={
+      id:String(Date.now())+'-'+Math.random().toString(36).slice(2,6),
+      text:text,
+      done:false,
+      mins:mins,
+      deadline:mins?Date.now()+mins*60*1000:null
+    };
+    todos.unshift(item);
+    save();
+    inputEl.value='';
+    minsEl.value='';
+    inputEl.focus();
+    render();
+  });
+
+  render();
+  setInterval(tick,1000);
+})();
+</script>
+</body>
+</html>

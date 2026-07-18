@@ -1,0 +1,326 @@
+═══════════════════════════════════════
+Part 1 · 实战笔记 (23篇)
+═══════════════════════════════════════
+
+
+── M1 跑通(5篇) ──
+  01  R2-AIOS：借鉴秦的法/术/势，编译 IC 研发操作系统
+     md: /Users/gaoyuan/Desktop/r2-video/780-aios.md
+     时间: 2026-07-15 00:58
+
+── ?  ──
+  01  芯片工程师使用 AI 的 3 个痛点和 3 个误区
+     md: /Users/gaoyuan/Desktop/r2-video/780-aios.md
+     时间: 2026-07-15 00:58
+   1  一个统一：Spec &rarr; SSoT，六条产线同源
+     md: ❌ 无路径
+
+── M1 跑通(5篇) ──
+  02  5 分钟快速上手，交付一个可工作的 UART
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/52-5 分钟快速上手，交付一个可工作的 UART.md
+     时间: 2026-07-14 05:04
+
+── ?  ──
+  02  R2-AIOS：借鉴秦的法/术/势，编译 IC 研发操作系统
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/52-5 分钟快速上手，交付一个可工作的 UART.md
+     时间: 2026-07-14 05:04
+
+── M1 跑通(5篇) ──
+  03  8h+一杯奶茶钱，从0到1开发一个商用EDA的平替
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/68-8h+一杯奶茶钱，从0到1开发一个商用EDA的平替.md
+     时间: 2026-07-18 14:24
+
+── ?  ──
+  03  r2-specx：给 pdf spec 装上编译引擎，机器可读驱动交付闭环
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/68-8h+一杯奶茶钱，从0到1开发一个商用EDA的平替.md
+     时间: 2026-07-18 14:24
+   3  三刀法：隔离爆炸半径，短闭环降反馈代价，发布火车载节奏
+     md: ❌ 无路径
+
+── M1 跑通(5篇) ──
+  04  24h 交付一个工业级IP，跑通基础功能验证
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/80-24h 交付一个工业级IP，跑通基础功能验证 1.md
+     时间: 2026-07-18 14:24
+
+── ?  ──
+  04  r2-loop：从避免失败到利用失败，循环工程的记忆飞轮与组织进化
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/80-24h 交付一个工业级IP，跑通基础功能验证 1.md
+     时间: 2026-07-18 14:24
+   4  四角色：产品 / 架构 / 验证 / 流程，互相制衡
+     md: ❌ 无路径
+
+── M1 跑通(5篇) ──
+  05  24h 交付一个工业级IP，跑通PPA优化
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/79-24h 交付一个工业级IP，跑通PPA优化 1.md
+     时间: 2026-07-16 13:23
+
+── ?  ──
+  05  r2-skill：你的 Skill 是便利贴还是 IP，帮团队将经验资产化
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/79-24h 交付一个工业级IP，跑通PPA优化 1.md
+     时间: 2026-07-16 13:23
+   5  五条主线：从探索到进化的工作流规则
+     md: ❌ 无路径
+
+── M2 认知(5篇) ──
+  06  R2推荐的模型，工具及场景配置组合
+     md: ❌ 无路径
+     时间: 2026-07-16 16:28
+
+── ?  ──
+  06  r2-eda：20 类定制EDA及cli，为智能引擎提供确定底座
+     md: ❌ 无路径
+     时间: 2026-07-16 16:28
+
+── M2 认知(5篇) ──
+  07  AI 写 RTL 快 100 倍，经验贬值还是变资产？
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/2-你站在蒸馏的哪一端——AI时代人的价值往哪里退.md
+     时间: 2026-07-13 17:00
+
+── ?  ──
+  07  r2-knowledge：决策飞轮，构建人和 Agent 都能消费的轻量知识库
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/2-你站在蒸馏的哪一端——AI时代人的价值往哪里退.md
+     时间: 2026-07-13 17:00
+
+── M2 认知(5篇) ──
+  08  小模型和方法论的黄金时代，附多场景案例
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/44-小模型和方法论的黄金时代，附多场景案例 定稿.md
+     时间: 2026-07-14 00:33
+
+── ?  ──
+  08  r2-4role：Peter 设目标，Andy 做设计，Vicky 当裁判，Fred 建产线
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/44-小模型和方法论的黄金时代，附多场景案例 定稿.md
+     时间: 2026-07-14 00:33
+
+── M2 认知(5篇) ──
+  09  提示词加餐包（复制即用·不讲课）
+     md: /Users/gaoyuan/Desktop/r2-connect/提示词加餐包-复制即用.md
+     时间: 2026-07-18 15:30
+  10  Thin Harness, Fat Skill，Thin Skill，Fat Knowledge
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/48-Thin Harness, Fat Skill; Thin Skill, Fat Knowledge.md
+     时间: 2026-07-14 02:18
+
+── ?  ──
+  10  r2-harness：效率来自反馈，持续交付可工作的内容
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/48-Thin Harness, Fat Skill; Thin Skill, Fat Knowledge.md
+     时间: 2026-07-14 02:18
+
+── M3 进阶(4篇) ──
+  11  Debug 占 40% 时间，智能体时代会变怎样？
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/50-Debug 占 40% 时间，智能体时代会变怎样？.md
+     时间: 2026-07-14 07:27
+
+── ?  ──
+  11  r2-3way：三刀法，以语言为刀，最小化试错成本
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/50-Debug 占 40% 时间，智能体时代会变怎样？.md
+     时间: 2026-07-14 07:27
+  11  十一类 Skills：原子能力组合成产线
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/50-Debug 占 40% 时间，智能体时代会变怎样？.md
+     时间: 2026-07-14 07:27
+
+── M3 进阶(4篇) ──
+  12  一个人盯 Claude Code 同时做三个 IP，经验与踩坑
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/56-一个人盯 Claude Code 同时做三个 IP —— 经验与踩坑.md
+     时间: 2026-07-14 07:15
+
+── ?  ──
+  12  r2-ip：集成一颗 IP 进 SoC，结构是因，复用是果
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/56-一个人盯 Claude Code 同时做三个 IP —— 经验与踩坑.md
+     时间: 2026-07-14 07:15
+
+── M3 进阶(4篇) ──
+  13  EDA 流程与 AI 工作流的集成，打造你的专属 AI 专家团
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/84.md
+     时间: 2026-07-17 10:55
+
+── ?  ──
+  13  r2-arch：架构探索九步收敛，编译持续交付的芯片产线
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/84.md
+     时间: 2026-07-17 10:55
+
+── M3 进阶(4篇) ──
+  14  Claude Code + git最强三板斧：Worktree + CLAUDE.md + 全闭环 Agentic 工作流
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/82-Claude Code + git最强三板斧：Worktree  + CLAUDE.md  + 全闭环 Agentic 工作流.md
+     时间: 2026-07-17 05:24
+
+── ?  ──
+  14  r2-cbbrtl：RTL 从能不能写到敢不敢用，CBB 标注四维映射
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/82-Claude Code + git最强三板斧：Worktree  + CLAUDE.md  + 全闭环 Agentic 工作流.md
+     时间: 2026-07-17 05:24
+
+── M4 刷loop(6篇) ──
+  15  循环工程时代的提示词基本功
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/83-循环工程时代的提示词基本功.md
+     时间: 2026-07-17 05:52
+
+── ?  ──
+  15  r2-c2rtl：错题驱动迭代，编译可信赖的 Verilog
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/83-循环工程时代的提示词基本功.md
+     时间: 2026-07-17 05:52
+
+── M4 刷loop(6篇) ──
+  16  AI 工作流搭建：让 AI 帮你搭建、优化、蒸馏 harness
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/57-AI 工作流搭建 — 让 AI 帮你搭建、优化、蒸馏 Harness.md
+     时间: 2026-07-14 07:41
+
+── ?  ──
+  16  r2-soc-integration：可定制的SOC开放集成平台
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/57-AI 工作流搭建 — 让 AI 帮你搭建、优化、蒸馏 Harness.md
+     时间: 2026-07-14 07:41
+
+── M4 刷loop(6篇) ──
+  17  选对 Loop，用好 Agent：芯片工程师的 AI 循环实战指南
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/45-选对 Loop，用好 Agent：芯片工程师的 AI 循环实战指南.md
+     时间: 2026-07-13 20:15
+
+── ?  ──
+  17  r2-vplan：人和智能体都觉得好用的 VPlan，从怎么验到验什么
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/45-选对 Loop，用好 Agent：芯片工程师的 AI 循环实战指南.md
+     时间: 2026-07-13 20:15
+
+── M4 刷loop(6篇) ──
+  18  知识库越多越慢越傻？给智能体用的知识库，怎么做？
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/55-知识库越多越慢越傻？给智能体用的知识库，怎么做？.md
+     时间: 2026-07-14 06:17
+
+── ?  ──
+  18  r2-cov：都江堰模型，为什么说约束是自适应的引擎
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/55-知识库越多越慢越傻？给智能体用的知识库，怎么做？.md
+     时间: 2026-07-14 06:17
+
+── M4 刷loop(6篇) ──
+  19  团队经验：是进化的 Skill 系统，还是僵尸 md 文档？
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/29-Skill 是便利贴，组织方式才是 IP.md
+     时间: 2026-07-14 05:24
+
+── ?  ──
+  19  r2-debug：八段闭环驱动负反馈，让出错回流预防
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/29-Skill 是便利贴，组织方式才是 IP.md
+     时间: 2026-07-14 05:24
+
+── M4 刷loop(6篇) ──
+  20  为何 harness 的保质期只有 90 天，skill 的保鲜期只有 60 天
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/49-为何 harness 的保质期只有 90 天，skill 的保鲜期只有 60 天 1定稿.md
+     时间: 2026-07-14 07:39
+
+── ?  ──
+  20  R2-Verismart-AIOS：以 DUT 为中心的验证流水线
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/49-为何 harness 的保质期只有 90 天，skill 的保鲜期只有 60 天 1定稿.md
+     时间: 2026-07-14 07:39
+  20  二十个 R2-EDA：确定性 syscall，覆盖 Spec &rarr; RTL &rarr; 验证 &rarr; 调试
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/49-为何 harness 的保质期只有 90 天，skill 的保鲜期只有 60 天 1定稿.md
+     时间: 2026-07-14 07:39
+
+── M5 进化(3篇) ──
+  21  高估了模型，低估了脚手架：自我进化的驾驭工程
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/53-高估了模型，低估了脚手架：自我进化的驾驭工程.md
+     时间: 2026-07-14 06:03
+
+── ?  ──
+  21  r2-dvbuild：响应式柔性验证流水线（PCIVAR）
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/53-高估了模型，低估了脚手架：自我进化的驾驭工程.md
+     时间: 2026-07-14 06:03
+
+── M5 进化(3篇) ──
+  22  从 Skill 收藏家到 Skill 进化论
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/29-Skill 是便利贴，组织方式才是 IP.md
+     时间: 2026-07-14 05:24
+
+── ?  ──
+  22  r2-chip-pm：人定方向，AI 算路径——芯片产品经理的决策法则
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/29-Skill 是便利贴，组织方式才是 IP.md
+     时间: 2026-07-14 05:24
+
+── M5 进化(3篇) ──
+  23  Skill 是便利贴，系统组织才是 IP：为什么skill 用了没效果
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/29-Skill 是便利贴，组织方式才是 IP.md
+     时间: 2026-07-14 05:24
+
+── ?  ──
+  23  r2-chip-pm：选战场、定代际差、裁指标——产品经理的三个决策时刻
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/29-Skill 是便利贴，组织方式才是 IP.md
+     时间: 2026-07-14 05:24
+  24  r2-chip-pm：从需求到价值：四步厘清，编译可签核的决策输入
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/29-Skill 是便利贴，组织方式才是 IP.md
+     时间: 2026-07-14 05:24
+  25  r2-chip-pm：七层洋葱全覆盖：从企业战略到每日，产品决策链路
+     md: ❌ 无路径
+  26  r2-chip-pm：一轮 Sprint 一轮校准，持续驱动产品演进
+     md: ❌ 无路径
+
+
+═══════════════════════════════════════
+Part 2 · R2-AIOS (25项)
+═══════════════════════════════════════
+
+
+── P1 R2-AIOS-1314520 (8项) ──
+  01  芯片工程师使用 AI 的 3 个痛点和 3 个误区
+     md: /Users/gaoyuan/Desktop/r2-video/648-33.md
+  02  R2-AIOS：借鉴秦的法/术/势，编译 IC 研发操作系统
+     md: /Users/gaoyuan/Desktop/r2-video/780-aios.md
+  03  r2-specx：给 pdf spec 装上编译引擎，机器可读驱动交付闭环
+     md: /Users/gaoyuan/Desktop/r2-video/664-编译引擎.md
+  04  r2-loop：从避免失败到利用失败，循环工程的记忆飞轮与组织进化
+     md: /Users/gaoyuan/Desktop/r2-video/689.md
+  05  r2-skill：你的 Skill 是便利贴还是 IP，帮团队将经验资产化
+     md: /Users/gaoyuan/Desktop/r2-video/786-skill.md
+  06  r2-eda：20 类定制EDA及cli，为智能引擎提供确定底座
+     md: ❌ 无路径
+  07  r2-knowledge：决策飞轮，构建人和 Agent 都能消费的轻量知识库
+     md: /Users/gaoyuan/Desktop/r2-video/648-33.md
+  08  r2-4role：Peter 设目标，Andy 做设计，Vicky 当裁判，Fred 建产线
+     md: /Users/gaoyuan/Desktop/r2-video/813-4role.md
+
+── P2 R2-Arch 敏捷架构探索 (7项) ──
+  10  r2-harness：效率来自反馈，持续交付可工作的内容
+     md: /Users/gaoyuan/Desktop/r2-video/185-r2-harness.md
+  11  r2-3way：三刀法，以语言为刀，最小化试错成本
+     md: /Users/gaoyuan/Desktop/r2-video/679-3way.md
+  12  r2-ip：集成一颗 IP 进 SoC，结构是因，复用是果
+     md: /Users/gaoyuan/Desktop/r2-video/747-r2-ip.md
+  13  r2-arch：架构探索九步收敛，编译持续交付的芯片产线
+     md: /Users/gaoyuan/Desktop/r2-video/13-r2-arch.md
+  14  r2-cbbrtl：RTL 从能不能写到敢不敢用，CBB 标注四维映射
+     md: /Users/gaoyuan/Desktop/r2-video/932-96-r2-cbbrtl：让 Agent 看懂存量 RTL 代码库中的 CBB.md
+  15  r2-c2rtl：错题驱动迭代，编译可信赖的 Verilog
+     md: /Users/gaoyuan/Desktop/r2-video/69-c2rtl.md
+  16  r2-soc-integration：可定制的SOC开放集成平台
+     md: /Users/gaoyuan/Projects/r2-obsidian/r2-course-2606/68.md
+
+── P3 R2-Verismart-AIOS (5项) ──
+  17  r2-vplan：人和智能体都觉得好用的 VPlan，从怎么验到验什么
+     md: /Users/gaoyuan/Desktop/r2-video/829-r2-vplan.md
+  18  r2-cov：都江堰模型，为什么说约束是自适应的引擎
+     md: /Users/gaoyuan/Desktop/r2-video/666-cov.md
+  19  r2-debug：八段闭环驱动负反馈，让出错回流预防
+     md: /Users/gaoyuan/Desktop/r2-video/846-r2-debug.md
+  20  R2-Verismart-AIOS：以 DUT 为中心的验证流水线
+     md: /Users/gaoyuan/Desktop/r2-video/805-r2-verismart.md
+  21  r2-dvbuild：响应式柔性验证流水线（PCIVAR）
+     md: ❌ 无路径
+
+── P4 R2-ProductSmart (5项) ──
+  22  r2-chip-pm：人定方向，AI 算路径——芯片产品经理的决策法则
+     md: ❌ 无路径
+  23  r2-chip-pm：选战场、定代际差、裁指标——产品经理的三个决策时刻
+     md: ❌ 无路径
+  24  r2-chip-pm：从需求到价值：四步厘清，编译可签核的决策输入
+     md: ❌ 无路径
+  25  r2-chip-pm：七层洋葱全覆盖：从企业战略到每日，产品决策链路
+     md: ❌ 无路径
+  26  r2-chip-pm：一轮 Sprint 一轮校准，持续驱动产品演进
+     md: ❌ 无路径
+
+── 解码 1314520 (6条) ──
+   1  一个统一：Spec &rarr; SSoT，六条产线同源
+     (解码条目，无独立md路径)
+   3  三刀法：隔离爆炸半径，短闭环降反馈代价，发布火车载节奏
+     (解码条目，无独立md路径)
+  11  十一类 Skills：原子能力组合成产线
+     (解码条目，无独立md路径)
+   4  四角色：产品 / 架构 / 验证 / 流程，互相制衡
+     (解码条目，无独立md路径)
+   5  五条主线：从探索到进化的工作流规则
+     (解码条目，无独立md路径)
+  20  二十个 R2-EDA：确定性 syscall，覆盖 Spec &rarr; RTL &rarr; 验证 &rarr; 调试
+     (解码条目，无独立md路径)
