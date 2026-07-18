@@ -1,0 +1,3 @@
+.backup.lock
+logs/
+.DS_Store
